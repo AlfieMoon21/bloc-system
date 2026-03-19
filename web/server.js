@@ -5,8 +5,10 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
-const { title } = require('process');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret-change-this-in-production';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -140,6 +142,24 @@ app.set('views', path.join(__dirname, 'views'));
 
 // API ROUTES (for mobile app)
 
+// Middleware: verifies JWT from Authorization: Bearer <token> header
+const requireApiAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    req.userId = decoded.userId;
+    next();
+  });
+};
+
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
 
@@ -159,9 +179,10 @@ app.post('/api/auth/login', (req, res) => {
     const match = await bcrypt.compare(password, user.password);
 
     if (match) {
-      // Return user data (no JWT yet)
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
       res.json({
         message: 'Login successful',
+        token,
         user: { id: user.id, username: user.username, email: user.email },
       });
     } else {
@@ -177,7 +198,6 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ error: 'All fields required' });
   }
 
-  // Check if user exists
   db.get('SELECT * FROM users WHERE email = ?', [email], async (err, existingUser) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
@@ -187,7 +207,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
 
     db.run(
@@ -198,13 +217,147 @@ app.post('/api/auth/register', async (req, res) => {
           return res.status(500).json({ error: 'Failed to create user' });
         }
 
+        const token = jwt.sign({ userId: this.lastID }, JWT_SECRET, { expiresIn: '7d' });
         res.json({
           message: 'Registration successful',
-          user: { id: this.lastID, username, email }
+          token,
+          user: { id: this.lastID, username, email },
         });
       }
     );
   });
+});
+
+// Public feed for mobile home screen
+app.get('/api/feed', (req, res) => {
+  db.all(
+    `SELECT sessions.id, sessions.gym_name, sessions.start_time, sessions.end_time,
+      sessions.notes, users.username, COUNT(climbs.id) as climb_count
+    FROM sessions
+    JOIN users ON sessions.user_id = users.id
+    LEFT JOIN climbs ON sessions.id = climbs.session_id
+    WHERE sessions.end_time IS NOT NULL
+    GROUP BY sessions.id
+    ORDER BY sessions.end_time DESC
+    LIMIT 20`,
+    [],
+    (err, sessions) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json(sessions);
+    }
+  );
+});
+
+// Get current user's sessions
+app.get('/api/sessions', requireApiAuth, (req, res) => {
+  db.all(
+    `SELECT sessions.id, sessions.gym_name, sessions.start_time, sessions.end_time,
+      sessions.notes, COUNT(climbs.id) as climb_count
+    FROM sessions
+    LEFT JOIN climbs ON sessions.id = climbs.session_id
+    WHERE sessions.user_id = ?
+    GROUP BY sessions.id
+    ORDER BY sessions.created_at DESC`,
+    [req.userId],
+    (err, sessions) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json(sessions);
+    }
+  );
+});
+
+// Start a new session
+app.post('/api/sessions', requireApiAuth, (req, res) => {
+  const { gym_name } = req.body;
+
+  if (!gym_name) {
+    return res.status(400).json({ error: 'Gym name is required' });
+  }
+
+  // Enforce one active session at a time
+  db.get(
+    'SELECT id FROM sessions WHERE user_id = ? AND end_time IS NULL',
+    [req.userId],
+    (err, existing) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (existing) {
+        return res.status(400).json({ error: 'You already have an active session', sessionId: existing.id });
+      }
+
+      db.run(
+        'INSERT INTO sessions (user_id, gym_name, start_time) VALUES (?, ?, datetime("now"))',
+        [req.userId, gym_name],
+        function (err) {
+          if (err) return res.status(500).json({ error: 'Failed to create session' });
+          res.json({ message: 'Session started', sessionId: this.lastID });
+        }
+      );
+    }
+  );
+});
+
+// Get session detail with climbs
+app.get('/api/sessions/:id', requireApiAuth, (req, res) => {
+  const sessionId = req.params.id;
+
+  db.get('SELECT * FROM sessions WHERE id = ? AND user_id = ?', [sessionId, req.userId], (err, session) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    db.all(
+      'SELECT * FROM climbs WHERE session_id = ? ORDER BY created_at ASC',
+      [sessionId],
+      (err, climbs) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json({ session, climbs });
+      }
+    );
+  });
+});
+
+// End a session
+app.post('/api/sessions/:id/end', requireApiAuth, (req, res) => {
+  const sessionId = req.params.id;
+  const { notes } = req.body;
+
+  db.run(
+    'UPDATE sessions SET end_time = datetime("now"), notes = ? WHERE id = ? AND user_id = ?',
+    [notes || null, sessionId, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (this.changes === 0) return res.status(404).json({ error: 'Session not found' });
+      res.json({ message: 'Session ended' });
+    }
+  );
+});
+
+// Add a climb to a session
+app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
+  const sessionId = req.params.id;
+  const { grade, attempts, topped, zones, description } = req.body;
+
+  if (!grade || !attempts) {
+    return res.status(400).json({ error: 'Grade and attempts are required' });
+  }
+
+  // Verify session belongs to user and is still active
+  db.get(
+    'SELECT id FROM sessions WHERE id = ? AND user_id = ? AND end_time IS NULL',
+    [sessionId, req.userId],
+    (err, session) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (!session) return res.status(404).json({ error: 'Active session not found' });
+
+      db.run(
+        'INSERT INTO climbs (session_id, grade, attempts, topped, zones, description) VALUES (?, ?, ?, ?, ?, ?)',
+        [sessionId, grade, parseInt(attempts), topped ? 1 : 0, zones || 0, description || null],
+        function (err) {
+          if (err) return res.status(500).json({ error: 'Failed to add climb' });
+          res.json({ message: 'Climb added', climbId: this.lastID });
+        }
+      );
+    }
+  );
 });
 // --end
 
