@@ -1,0 +1,29 @@
+{
+  "name": "bouldering-blog",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.falmouth.ac.uk/AJ313798/bouldering-blog.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.3",
+    "express-session": "^1.18.2",
+    "multer": "^2.0.2",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

@@ -1,0 +1,69 @@
+<div class="session-header">
+  <h2>{{session.gym_name}}</h2>
+  <p>Started: {{session.start_time}}</p>
+  {{#if session.end_time}}
+    <p>Ended: {{session.end_time}}</p>
+  {{else}}
+    <p class="active-badge">Session Active</p>
+  {{/if}}
+</div>
+
+{{#if session.notes}}
+  <div class="session-notes">
+    <h3>Notes</h3>
+    <p>{{session.notes}}</p>
+  </div>
+{{/if}}
+
+{{#unless session.end_time}}
+  {{#if (eq user.id session.user_id)}}
+    <div class="session-actions">
+      <a href="/session/{{session.id}}/add-climb" class="btn-primary">Add Climb</a>
+      <form action="/session/{{session.id}}/end" method="POST" style="display:inline;">
+        <button type="submit" class="btn-secondary">End Session</button>
+      </form>
+    </div>
+  {{/if}}
+{{/unless}}
+
+<section class="climbs-section">
+  <h3>Climbs ({{climbs.length}})</h3>
+  
+  {{#if climbs.length}}
+    <div class="climb-feed">
+      {{#each climbs}}
+        <div class="climb-card">
+          {{#if this.image_path}}
+            <div class="climb-image">
+              <img src="{{this.image_path}}" alt="Climb photo">
+            </div>
+          {{/if}}
+          
+          <div class="climb-info">
+            <h4 class="climb-grade">{{this.grade}}</h4>
+            
+            <div class="climb-stats">
+              <span class="stat">
+                <strong>Attempts:</strong> {{this.attempts}}
+              </span>
+              <span class="stat">
+                <strong>Topped:</strong> {{#if this.topped}}Yes ✓{{else}}No{{/if}}
+              </span>
+              {{#if this.zones}}
+                <span class="stat">
+                  <strong>Zones:</strong> {{this.zones}}
+                </span>
+              {{/if}}
+            </div>
+            
+            {{#if this.description}}
+              <p class="climb-description">{{this.description}}</p>
+            {{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <p class="no-climbs">No climbs logged yet.</p>
+  {{/if}}
+</section>

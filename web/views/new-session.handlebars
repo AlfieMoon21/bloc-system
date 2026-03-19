@@ -1,0 +1,16 @@
+<h2>Start New Climbing Session</h2>
+<p>Begin tracking your climbs. You can add climbs and end the session when you're done.</p>
+
+<form action="/session/new" method="POST">
+  <div class="form-group">
+    <label for="gym_name">Gym Name *</label>
+    <input type="text" id="gym_name" name="gym_name" required placeholder="e.g., Boulder Barn">
+  </div>
+  
+  {{#if error}}
+    <p class="error">{{error}}</p>
+  {{/if}}
+  
+  <button type="submit" class="btn-primary">Start Session</button>
+  <a href="/" class="btn-secondary">Cancel</a>
+</form>

@@ -1,0 +1,58 @@
+<h2>Welcome to the Climbing Blog</h2>
+
+{{#if user}}
+  {{#if activeSession}}
+    <div class="active-session-banner">
+      <p>You have an active session at <strong>{{activeSession.gym_name}}</strong></p>
+      <a href="/session/{{activeSession.id}}" class="btn-primary">View Active Session</a>
+    </div>
+  {{else}}
+    <div class="start-session-banner">
+      <p>Ready to climb?</p>
+      <a href="/session/new" class="btn-primary">Start New Session</a>
+    </div>
+  {{/if}}
+{{else}}
+   <div class="welcome-banner">
+    <p>Log in to start</p>
+    <a href="/login" class="btn-primary">Login</a>
+  </div>
+{{/if}}
+
+<section class="session-feed">
+  <h3>Recent Sessions</h3>
+  
+  {{#if sessions.length}}
+    <div class="session-grid">
+      {{#each sessions}}
+        <a href="/session/{{this.id}}" class="session-card">
+          {{#if this.images.length}}
+            <div class="photo-collage photo-count-{{this.images.length}}">
+              {{#each this.images}}
+                <img src="{{this}}" alt="Climb photo">
+              {{/each}}
+            </div>
+          {{else}}
+            <div class="photo-collage no-photos">
+              <span>No photos</span>
+            </div>
+          {{/if}}
+          
+          <div class="session-info">
+            <h4>{{this.gym_name}}</h4>
+            {{#if this.notes}}
+              <p class="session-notes-preview">{{this.notes}}</p>
+            {{/if}}
+            <div class="session-meta">
+              <span class="session-date">{{this.end_time}}</span>
+              <span class="climb-count">{{this.climb_count}} climbs</span>
+            </div>
+            <p class="posted-by">Posted by: {{this.username}}</p>
+          </div>
+        </a>
+      {{/each}}
+    </div>
+  {{else}}
+    <p class="no-sessions">No sessions yet. Be the first to post!</p>
+  {{/if}}
+</section>

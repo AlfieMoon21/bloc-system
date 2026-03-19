@@ -1,0 +1,80 @@
+<h1>Log a Climb</h1>
+
+<form action="/log-climb" method="POST" enctype="multipart/form-data">
+    <fieldset>
+        <legend>Session Information</legend>
+
+        <div>
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required>
+        </div>
+
+        <div>
+            <label for="gym_name">Gym Name:</label>
+            <input type="text" id="gym_name" name="gym_name" required placeholder="e.g., The Climbing Hangar">
+        </div>
+
+        <div>
+            <label for="duration">Duration (minutes, optional):</label>
+            <input type="number" id="duration" name="duration" min="0" placeholder="e.g., 120">
+        </div>
+
+        <div>
+            <label for="notes">Session Notes (optional):</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="How was the session overall?"></textarea>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Climb Details</legend>
+
+        <div>
+            <label for="grade">Grade:</label>
+            <select id="grade" name="grade" required>
+                <option value="">Select grade...</option>
+                <option value="V0">V0</option>
+                <option value="V1">V1</option>
+                <option value="V2">V2</option>
+                <option value="V3">V3</option>
+                <option value="V4">V4</option>
+                <option value="V5">V5</option>
+                <option value="V6">V6</option>
+                <option value="V7">V7</option>
+                <option value="V8">V8</option>
+                <option value="V9">V9</option>
+                <option value="V10">V10</option>
+                <option value="V10+">V10+</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="attempts">Attempts:</label>
+            <input type="number" id="attempts" name="attempts" min="1" value="1" required>
+        </div>
+
+        <div>
+            <label for="topped">
+                <input type="checkbox" id="topped" name="topped" value="1">
+                Topped (completed)
+            </label>
+        </div>
+
+        <div>
+            <label for="zones">Zones:</label>
+            <input type="number" id="zones" name="zones" min="0" value="0">
+        </div>
+
+        <div>
+            <label for="description">Description (optional):</label>
+            <textarea id="description" name="description" rows="4" placeholder="Notes about the climb, technique used, etc."></textarea>
+        </div>
+
+        <div>
+            <label for="image">Upload Image (optional):</label>
+            <input type="file" id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+        </div>
+    </fieldset>
+
+    <button type="submit">Log Climb</button>
+    <a href="/">Cancel</a>
+</form>

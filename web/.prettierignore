@@ -1,0 +1,6 @@
+node_modules
+database.db
+public/uploads
+.git
+*.md
+package-lock.json

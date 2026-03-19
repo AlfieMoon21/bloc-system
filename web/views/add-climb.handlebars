@@ -1,0 +1,56 @@
+<h2>Add Climb to Session</h2>
+<p>Log a climb you just completed.</p>
+
+<form action="/session/{{session.id}}/add-climb" method="POST" enctype="multipart/form-data">
+  
+  <div class="form-group">
+    <label for="grade">Grade *</label>
+    <select id="grade" name="grade" required>
+      <option value="">Select grade...</option>
+      <option value="VB">VB</option>
+      <option value="V0">V0</option>
+      <option value="V1">V1</option>
+      <option value="V2">V2</option>
+      <option value="V3">V3</option>
+      <option value="V4">V4</option>
+      <option value="V5">V5</option>
+      <option value="V6">V6</option>
+      <option value="V7">V7</option>
+      <option value="V8">V8</option>
+      <option value="V9">V9</option>
+      <option value="V10">V10</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="attempts">Attempts *</label>
+    <input type="number" id="attempts" name="attempts" min="1" value="1" required>
+  </div>
+
+ <div class="form-group checkbox-group">
+      <input type="checkbox" id="topped" name="topped" value="1">
+      <label for="topped">Topped (completed)</label>
+    </div>
+
+  <div class="form-group">
+    <label for="zones">Zones</label>
+    <input type="number" id="zones" name="zones" min="0" value="0">
+  </div>
+
+  <div class="form-group">
+    <label for="description">Description (optional)</label>
+    <textarea id="description" name="description" rows="3" placeholder="How did it feel? Any beta to remember?"></textarea>
+  </div>
+
+  <div class="form-group">
+    <label for="image">Photo (optional)</label>
+    <input type="file" id="image" name="image" accept="image/*">
+  </div>
+
+  {{#if error}}
+    <p class="error">{{error}}</p>
+  {{/if}}
+
+  <button type="submit" class="btn-primary">Add Climb</button>
+  <a href="/session/{{session.id}}" class="btn-secondary">Cancel</a>
+</form>

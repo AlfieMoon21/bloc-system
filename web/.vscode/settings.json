@@ -1,0 +1,46 @@
+{
+  // Hide unnecessary folders from file explorer
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/database.db": false
+  },
+
+  // Auto-save after 15 second of inactivity
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 15000,
+
+  // Code formatting preferences
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Language-specific settings
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[handlebars]": {
+    "editor.formatOnSave": false
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Git integration
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+
+  // Show whitespace characters
+  "editor.renderWhitespace": "boundary",
+
+  // Highlight matching brackets
+  "editor.bracketPairColorization.enabled": true,
+
+  // Terminal settings
+  "terminal.integrated.defaultProfile.linux": "bash"
+}
