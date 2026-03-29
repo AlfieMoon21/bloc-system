@@ -5,9 +5,11 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
+// COMP204 ADDITION: jsonwebtoken lets us create and verify JWT tokens for mobile auth
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// COMP204 ADDITION: the secret key used to sign tokens - stored in .env so it's not hardcoded
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret-change-this-in-production';
 
 const app = express();
@@ -138,52 +140,82 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Routes
 
-//COMP204 code --start
+// ============================================================
+// COMP204 ADDITION — REST API for mobile app
+// Everything between these markers was written for this module.
+// The web routes below this block are from a previous project.
+// ============================================================
 
-// API ROUTES (for mobile app)
-
-// Middleware: verifies JWT from Authorization: Bearer <token> header
+// ------------------------------------------------------------------
+// COMP204: requireApiAuth middleware
+// The web app uses cookie sessions for auth (built previously).
+// The mobile app can't use cookies across requests, so we use JWTs
+// instead. This middleware reads the token from the Authorization
+// header and verifies it before letting the request through.
+// ------------------------------------------------------------------
 const requireApiAuth = (req, res, next) => {
+  // Read the Authorization header - mobile app sends "Bearer <token>"
   const authHeader = req.headers['authorization'];
+
+  // Split on the space to get just the token part after "Bearer"
+  // The && means: if authHeader is null/undefined, token stays undefined too
   const token = authHeader && authHeader.split(' ')[1];
 
+  // If there's no token at all, reject the request immediately
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
+  // jwt.verify checks the token's signature against our secret
+  // If it's tampered with or expired, err will be set
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+    // Token is valid - attach the userId from the token payload to the request
+    // so route handlers can use req.userId without querying the DB again
     req.userId = decoded.userId;
-    next();
+    next(); // pass control to the actual route handler
   });
 };
 
+// ------------------------------------------------------------------
+// COMP204: POST /api/auth/login
+// Mobile login - same logic as the web login route but returns JSON
+// and a JWT token instead of setting a cookie session.
+// ------------------------------------------------------------------
 app.post('/api/auth/login', (req, res) => {
+  // Destructure email and password from the JSON request body
   const { email, password } = req.body;
 
+  // Reject immediately if either field is missing
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
+  // Look up user by email - parameterised query prevents SQL injection
   db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
 
+    // No matching user found
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
+    // bcrypt.compare hashes the submitted password and checks it against
+    // the stored hash - we never store or compare plain-text passwords
     const match = await bcrypt.compare(password, user.password);
 
     if (match) {
+      // Sign a JWT containing the userId - expires in 7 days
+      // The mobile app stores this token and sends it with every request
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
       res.json({
         message: 'Login successful',
-        token,
-        user: { id: user.id, username: user.username, email: user.email },
+        token,                                                          // sent to the app to store
+        user: { id: user.id, username: user.username, email: user.email }, // user info for the UI
       });
     } else {
       res.status(401).json({ error: 'Invalid password' });
@@ -191,13 +223,21 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
+// ------------------------------------------------------------------
+// COMP204: POST /api/auth/register
+// Mobile registration - creates a new user and returns a JWT so the
+// app is immediately logged in without a second request.
+// ------------------------------------------------------------------
 app.post('/api/auth/register', async (req, res) => {
+  // Pull all three required fields from the request body
   const { email, password, username } = req.body;
 
+  // All three fields must be present
   if (!email || !password || !username) {
     return res.status(400).json({ error: 'All fields required' });
   }
 
+  // Check whether this email is already in use
   db.get('SELECT * FROM users WHERE email = ?', [email], async (err, existingUser) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
@@ -207,8 +247,10 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
+    // Hash the password before storing - 10 salt rounds is the bcrypt default
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Insert the new user row into the database
     db.run(
       'INSERT INTO users (email, password, username) VALUES (?, ?, ?)',
       [email, hashedPassword, username],
@@ -217,6 +259,7 @@ app.post('/api/auth/register', async (req, res) => {
           return res.status(500).json({ error: 'Failed to create user' });
         }
 
+        // this.lastID is the auto-incremented ID of the row we just inserted
         const token = jwt.sign({ userId: this.lastID }, JWT_SECRET, { expiresIn: '7d' });
         res.json({
           message: 'Registration successful',
@@ -228,37 +271,47 @@ app.post('/api/auth/register', async (req, res) => {
   });
 });
 
-// Public feed for mobile home screen
+// ------------------------------------------------------------------
+// COMP204: GET /api/feed
+// Public session feed for the mobile home screen.
+// No auth required - anyone can browse completed sessions.
+// Uses a JOIN to get the username and COUNT to show climb totals.
+// ------------------------------------------------------------------
 app.get('/api/feed', (req, res) => {
   db.all(
     `SELECT sessions.id, sessions.gym_name, sessions.start_time, sessions.end_time,
       sessions.notes, users.username, COUNT(climbs.id) as climb_count
     FROM sessions
-    JOIN users ON sessions.user_id = users.id
-    LEFT JOIN climbs ON sessions.id = climbs.session_id
-    WHERE sessions.end_time IS NOT NULL
+    JOIN users ON sessions.user_id = users.id          -- get the poster's username
+    LEFT JOIN climbs ON sessions.id = climbs.session_id -- LEFT JOIN so sessions with 0 climbs still appear
+    WHERE sessions.end_time IS NOT NULL                 -- only show completed sessions
     GROUP BY sessions.id
     ORDER BY sessions.end_time DESC
-    LIMIT 20`,
+    LIMIT 20`,                                          // cap at 20 to avoid huge responses
     [],
     (err, sessions) => {
       if (err) return res.status(500).json({ error: 'Database error' });
-      res.json(sessions);
+      res.json(sessions); // send the array as JSON
     }
   );
 });
 
-// Get current user's sessions
+// ------------------------------------------------------------------
+// COMP204: GET /api/sessions
+// Returns the logged-in user's own sessions (most recent first).
+// requireApiAuth extracts req.userId from the JWT so we know whose
+// sessions to fetch without the user sending their ID explicitly.
+// ------------------------------------------------------------------
 app.get('/api/sessions', requireApiAuth, (req, res) => {
   db.all(
     `SELECT sessions.id, sessions.gym_name, sessions.start_time, sessions.end_time,
       sessions.notes, COUNT(climbs.id) as climb_count
     FROM sessions
     LEFT JOIN climbs ON sessions.id = climbs.session_id
-    WHERE sessions.user_id = ?
+    WHERE sessions.user_id = ?          -- only this user's sessions
     GROUP BY sessions.id
-    ORDER BY sessions.created_at DESC`,
-    [req.userId],
+    ORDER BY sessions.created_at DESC`, // newest first
+    [req.userId],                       // req.userId was set by requireApiAuth
     (err, sessions) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       res.json(sessions);
@@ -266,7 +319,11 @@ app.get('/api/sessions', requireApiAuth, (req, res) => {
   );
 });
 
-// Start a new session
+// ------------------------------------------------------------------
+// COMP204: POST /api/sessions
+// Start a new climbing session. Enforces only one active session at
+// a time per user (same rule as the web app).
+// ------------------------------------------------------------------
 app.post('/api/sessions', requireApiAuth, (req, res) => {
   const { gym_name } = req.body;
 
@@ -274,21 +331,25 @@ app.post('/api/sessions', requireApiAuth, (req, res) => {
     return res.status(400).json({ error: 'Gym name is required' });
   }
 
-  // Enforce one active session at a time
+  // Check whether this user already has a session with no end_time (still active)
   db.get(
     'SELECT id FROM sessions WHERE user_id = ? AND end_time IS NULL',
     [req.userId],
     (err, existing) => {
       if (err) return res.status(500).json({ error: 'Database error' });
+
+      // If an active session exists, return its ID so the app can navigate to it
       if (existing) {
         return res.status(400).json({ error: 'You already have an active session', sessionId: existing.id });
       }
 
+      // Create the session - start_time is set to the current UTC time by SQLite
       db.run(
         'INSERT INTO sessions (user_id, gym_name, start_time) VALUES (?, ?, datetime("now"))',
         [req.userId, gym_name],
         function (err) {
           if (err) return res.status(500).json({ error: 'Failed to create session' });
+          // Return the new session's ID so the app can navigate to it
           res.json({ message: 'Session started', sessionId: this.lastID });
         }
       );
@@ -296,51 +357,70 @@ app.post('/api/sessions', requireApiAuth, (req, res) => {
   );
 });
 
-// Get session detail with climbs
+// ------------------------------------------------------------------
+// COMP204: GET /api/sessions/:id
+// Fetch a single session with all its climbs. The AND user_id = ?
+// check means users can only read their own sessions.
+// ------------------------------------------------------------------
 app.get('/api/sessions/:id', requireApiAuth, (req, res) => {
-  const sessionId = req.params.id;
+  const sessionId = req.params.id; // :id from the URL
 
+  // Fetch the session, but only if it belongs to this user
   db.get('SELECT * FROM sessions WHERE id = ? AND user_id = ?', [sessionId, req.userId], (err, session) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (!session) return res.status(404).json({ error: 'Session not found' });
 
+    // Then fetch all climbs logged in this session, oldest first
     db.all(
       'SELECT * FROM climbs WHERE session_id = ? ORDER BY created_at ASC',
       [sessionId],
       (err, climbs) => {
         if (err) return res.status(500).json({ error: 'Database error' });
+        // Return both the session info and its climbs in one response
         res.json({ session, climbs });
       }
     );
   });
 });
 
-// End a session
+// ------------------------------------------------------------------
+// COMP204: POST /api/sessions/:id/end
+// Marks a session as complete by setting its end_time.
+// The AND user_id = ? prevents one user from ending another's session.
+// ------------------------------------------------------------------
 app.post('/api/sessions/:id/end', requireApiAuth, (req, res) => {
   const sessionId = req.params.id;
-  const { notes } = req.body;
+  const { notes } = req.body; // optional notes the user adds when ending
 
   db.run(
+    // Set end_time to now and optionally save notes
     'UPDATE sessions SET end_time = datetime("now"), notes = ? WHERE id = ? AND user_id = ?',
     [notes || null, sessionId, req.userId],
     function (err) {
       if (err) return res.status(500).json({ error: 'Database error' });
+      // this.changes is 0 if no row matched (wrong ID or wrong user)
       if (this.changes === 0) return res.status(404).json({ error: 'Session not found' });
       res.json({ message: 'Session ended' });
     }
   );
 });
 
-// Add a climb to a session
+// ------------------------------------------------------------------
+// COMP204: POST /api/sessions/:id/climbs
+// Adds a climb to an active session. Validates the session exists,
+// belongs to this user, and hasn't been ended yet.
+// ------------------------------------------------------------------
 app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
   const sessionId = req.params.id;
+  // Destructure all climb fields from the request body
   const { grade, attempts, topped, zones, description } = req.body;
 
+  // Grade and attempts are mandatory - everything else is optional
   if (!grade || !attempts) {
     return res.status(400).json({ error: 'Grade and attempts are required' });
   }
 
-  // Verify session belongs to user and is still active
+  // Confirm the session is active (end_time IS NULL) and belongs to this user
   db.get(
     'SELECT id FROM sessions WHERE id = ? AND user_id = ? AND end_time IS NULL',
     [sessionId, req.userId],
@@ -350,7 +430,14 @@ app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
 
       db.run(
         'INSERT INTO climbs (session_id, grade, attempts, topped, zones, description) VALUES (?, ?, ?, ?, ?, ?)',
-        [sessionId, grade, parseInt(attempts), topped ? 1 : 0, zones || 0, description || null],
+        [
+          sessionId,
+          grade,
+          parseInt(attempts),    // ensure it's stored as a number
+          topped ? 1 : 0,        // SQLite has no boolean - store as 1 or 0
+          zones || 0,            // default to 0 zones if not provided
+          description || null,   // optional free-text note
+        ],
         function (err) {
           if (err) return res.status(500).json({ error: 'Failed to add climb' });
           res.json({ message: 'Climb added', climbId: this.lastID });
@@ -359,7 +446,10 @@ app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
     }
   );
 });
-// --end
+
+// ============================================================
+// END OF COMP204 ADDITIONS
+// ============================================================
 
 // Homepage - displays public feed of completed sessions
 app.get('/', (req, res) => {
