@@ -83,10 +83,9 @@ export const api = {
         const blob = await fetch(imageUri).then((r) => r.blob());
         formData.append('image', blob, 'photo.jpg');
       } else {
-        // Native: React Native fetch handles { uri, name, type } objects
-        const filename = imageUri.split('/').pop() ?? 'photo.jpg';
-        const ext = /\.(\w+)$/.exec(filename)?.[1] ?? 'jpg';
-        formData.append('image', { uri: imageUri, name: filename, type: `image/${ext}` } as any);
+        // Native: React Native fetch handles { uri, name, type } objects.
+        // Always send as jpeg — iOS returns HEIC URIs but the data is JPEG-compatible.
+        formData.append('image', { uri: imageUri, name: 'photo.jpg', type: 'image/jpeg' } as any);
       }
     }
 

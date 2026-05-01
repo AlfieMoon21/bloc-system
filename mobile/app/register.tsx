@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useAuth } from '@/context/auth';
 
 export default function RegisterScreen() {
-  const { register } = useAuth();
+  const { register, user } = useAuth();
+  if (user) return <Redirect href="/(tabs)" />;
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

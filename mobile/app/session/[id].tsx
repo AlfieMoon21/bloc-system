@@ -65,7 +65,7 @@ export default function SessionDetailScreen() {
     setLoading(false);
   }, [id]);
 
-  useFocusEffect(fetchSession);
+  useFocusEffect(useCallback(() => { fetchSession(); }, [fetchSession]));
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
