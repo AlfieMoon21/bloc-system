@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 // COMP204 ADDITION: jsonwebtoken lets us create and verify JWT tokens for mobile auth
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 require('dotenv').config();
 
 // COMP204 ADDITION: the secret key used to sign tokens - stored in .env so it's not hardcoded
@@ -58,6 +59,7 @@ const upload = multer({
 
 // Middleware to load user data and active session for all templates
 // This runs on every request, making user/session data available in res.locals
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -410,7 +412,7 @@ app.post('/api/sessions/:id/end', requireApiAuth, (req, res) => {
 // Adds a climb to an active session. Validates the session exists,
 // belongs to this user, and hasn't been ended yet.
 // ------------------------------------------------------------------
-app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
+app.post('/api/sessions/:id/climbs', requireApiAuth, upload.single('image'), (req, res) => {
   const sessionId = req.params.id;
   // Destructure all climb fields from the request body
   const { grade, attempts, topped, zones, description } = req.body;
@@ -419,6 +421,8 @@ app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
   if (!grade || !attempts) {
     return res.status(400).json({ error: 'Grade and attempts are required' });
   }
+
+  const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
   // Confirm the session is active (end_time IS NULL) and belongs to this user
   db.get(
@@ -429,14 +433,15 @@ app.post('/api/sessions/:id/climbs', requireApiAuth, (req, res) => {
       if (!session) return res.status(404).json({ error: 'Active session not found' });
 
       db.run(
-        'INSERT INTO climbs (session_id, grade, attempts, topped, zones, description) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO climbs (session_id, grade, attempts, topped, zones, description, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [
           sessionId,
           grade,
-          parseInt(attempts),    // ensure it's stored as a number
-          topped ? 1 : 0,        // SQLite has no boolean - store as 1 or 0
-          zones || 0,            // default to 0 zones if not provided
-          description || null,   // optional free-text note
+          parseInt(attempts),
+          topped ? 1 : 0,
+          zones || 0,
+          description || null,
+          imagePath,
         ],
         function (err) {
           if (err) return res.status(500).json({ error: 'Failed to add climb' });

@@ -1,0 +1,401 @@
+% Bloc — COMP204 Distributed Systems Poster
+\documentclass[final]{beamer}
+
+% ====================
+% Packages
+% ====================
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{luainputenc}
+\usepackage[defaultsans]{opensans}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[size=custom, width=122,height=91, scale=0.95]{beamerposter}
+\usetheme{gemini}
+\usecolortheme{gemini}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.14}
+\usepackage{anyfontsize}
+\usepackage{listings}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+
+% Code listing style — JavaScript
+\lstset{
+    language=Java,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    morekeywords={const,let,async,await,req,res,next,jwt,bcrypt}
+}
+
+% ====================
+% Lengths
+% ====================
+
+\newlength{\sepwidth}
+\newlength{\colwidth}
+\setlength{\sepwidth}{0.025\paperwidth}
+\setlength{\colwidth}{0.3\paperwidth}
+
+\newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
+
+% ====================
+% Title
+% ====================
+
+\title{Bloc: A Distributed Bouldering Session Tracker with Dual-Client Architecture}
+
+\author{Alfie James Jenkins}
+
+\institute[shortinst]{Falmouth University -- COMP204 Distributed Systems}
+
+% ====================
+% Footer
+% ====================
+
+\footercontent{
+  \href{https://github.falmouth.ac.uk/AJ313798}{github.falmouth.ac.uk/AJ313798} \hfill
+  COMP204 Distributed Systems -- 2025/26 \hfill
+  \href{mailto:aj313798@falmouth.ac.uk}{aj313798@falmouth.ac.uk}}
+
+% ====================
+% Body
+% ====================
+
+\begin{document}
+
+\begin{frame}[t,fragile]
+\begin{columns}[t]
+\separatorcolumn
+
+% ============ COLUMN 1 ============
+\begin{column}{\colwidth}
+
+  \begin{block}{The Bloc System}
+    Bloc is a bouldering session tracker built as a distributed web service.
+    Climbers can log gym sessions and individual climbs from a browser or a
+    mobile phone, with all data shared in real time through a single backend.
+
+    \vspace{0.15cm}
+    The system was designed to demonstrate a core distributed systems pattern:
+    \textbf{multiple independent clients sharing a common server and data store}.
+    Neither client holds authoritative state --- both read and write through the
+    same REST API, so a session started on the web is immediately visible on
+    the mobile app and vice versa.
+
+    \vspace{0.15cm}
+    \textbf{Deployed at:} \texttt{dr-aj313798.kemeneth.net}
+  \end{block}
+
+  \begin{block}{System Architecture}
+
+    \begin{center}
+    \begin{tikzpicture}[
+      node distance=1.1cm and 1.6cm,
+      box/.style={draw, rounded corners, fill=gray!12, inner sep=8pt,
+                  font=\small, text width=3.2cm, align=center},
+      sbox/.style={draw, rounded corners, fill=blue!12, inner sep=8pt,
+                   font=\small, text width=3.2cm, align=center},
+      dbbox/.style={draw, cylinder, shape border rotate=90,
+                    fill=orange!15, inner sep=6pt, font=\small, align=center,
+                    aspect=0.25},
+      arr/.style={-{Latex[length=2.5mm]}, thick},
+    ]
+      \node[box]  (web)    {Web Browser\\{\footnotesize Handlebars views\\cookie session}};
+      \node[box]  (mob)    [below=1.5cm of web] {Mobile App\\{\footnotesize React Native / Expo\\JWT bearer token}};
+      \node[sbox] (api)    [right=2.2cm of web, yshift=-0.75cm]
+                           {Express Server\\{\footnotesize Node.js\\REST API}};
+      \node[dbbox](db)     [right=2.0cm of api] {SQLite\\DB};
+
+      \draw[arr] (web.east) -- node[above,font=\tiny]{HTTP/HTTPS} (api.west |- web.east);
+      \draw[arr] (mob.east) -- node[below,font=\tiny]{HTTPS + JWT} (api.west |- mob.east);
+      \draw[arr] ([xshift=2pt]api.east) -- node[above,font=\tiny]{SQL} (db.west);
+      \draw[arr] (db.west)  -- ([xshift=-2pt]api.east);
+    \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.1cm}
+    The web app uses cookie-based sessions (Express-session) because browsers
+    handle cookies natively. The mobile app cannot share that cookie jar, so it
+    authenticates with JWTs sent in the \texttt{Authorization: Bearer} header.
+    Both paths share the same database rows --- the distribution point is
+    purely in the protocol layer, not the data layer.
+  \end{block}
+
+  \begin{block}{Technology Stack}
+    \begin{center}
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Layer} & \textbf{Technology} \\
+    \midrule
+    Mobile client   & React Native, Expo, TypeScript \\
+    Web client      & Express, Handlebars, CSS \\
+    REST API        & Express (Node.js) \\
+    Database        & SQLite3 \\
+    Auth (web)      & bcrypt + express-session \\
+    Auth (mobile)   & bcrypt + JWT (jsonwebtoken) \\
+    File uploads    & Multer (5\,MB limit, image validation) \\
+    Hosting         & VPS at \texttt{kemeneth.net} \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+  \end{block}
+
+  \begin{block}{References}
+    \footnotesize
+    \begin{itemize}\setlength\itemsep{0pt}
+      \item Fielding, R.\ T.\ (2000). \textit{Architectural Styles and the Design of Network-based Software Architectures}. University of California, Irvine.
+      \item Jones, M.\ B., Bradley, J., \& Sakimura, N.\ (2015). \textit{JSON Web Token (JWT)}. RFC 7519. IETF.
+      \item Provos, N., \& Mazieres, D.\ (1999). \textit{A Future-Adaptable Password Scheme}. USENIX Annual Technical Conference.
+      \item Express.js documentation: \texttt{https://expressjs.com}
+      \item Expo documentation: \texttt{https://docs.expo.dev}
+    \end{itemize}
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+
+% ============ COLUMN 2 ============
+\begin{column}{\colwidth}
+
+  \begin{block}{REST API Design}
+    Eight endpoints form the mobile API. All session and climb routes are
+    protected by the \texttt{requireApiAuth} middleware, which verifies the JWT
+    and injects \texttt{req.userId} before the route handler runs.
+
+    \vspace{0.1cm}
+    \begin{center}
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{Method} & \textbf{Endpoint} & \textbf{Auth} \\
+    \midrule
+    POST & \texttt{/api/auth/login}        & Public \\
+    POST & \texttt{/api/auth/register}     & Public \\
+    GET  & \texttt{/api/feed}              & Public \\
+    GET  & \texttt{/api/sessions}          & JWT \\
+    POST & \texttt{/api/sessions}          & JWT \\
+    GET  & \texttt{/api/sessions/:id}      & JWT \\
+    POST & \texttt{/api/sessions/:id/end}  & JWT \\
+    POST & \texttt{/api/sessions/:id/climbs} & JWT \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+
+    \vspace{0.1cm}
+    The public feed (\texttt{GET /api/feed}) returns the 20 most recent
+    completed sessions with climb counts, using a SQL \texttt{LEFT JOIN} so
+    sessions with zero climbs still appear.
+  \end{block}
+
+  \begin{exampleblock}{JWT Authentication Middleware}
+
+\begin{lstlisting}
+const requireApiAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  // Header format: "Bearer <token>"
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token)
+    return res.status(401).json({ error: 'Auth required' });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err)
+      return res.status(401).json({ error: 'Invalid token' });
+    req.userId = decoded.userId; // injected for route handlers
+    next();
+  });
+};
+\end{lstlisting}
+
+    \vspace{0.1cm}
+    Tokens are signed with \texttt{HS256} and expire after 7 days. The mobile
+    app stores the token in \texttt{AsyncStorage} and restores it on launch,
+    keeping the user logged in across app restarts without re-authenticating.
+  \end{exampleblock}
+
+  \begin{block}{Database Schema}
+    Three tables with cascading foreign keys. All state lives in SQLite ---
+    neither client caches authoritative data locally.
+
+    \vspace{0.2cm}
+    \begin{center}
+    \begin{tikzpicture}[
+      entity/.style={draw, fill=gray!10, rounded corners,
+                     inner sep=8pt, font=\footnotesize, align=left},
+      rel/.style={-{Latex[length=2mm]}, thick},
+    ]
+      \node[entity] (users) {
+        \textbf{users}\\
+        \texttt{id} \ PK\\
+        \texttt{email} \ UNIQUE\\
+        \texttt{password} \ hashed\\
+        \texttt{username}\\
+        \texttt{created\_at}
+      };
+
+      \node[entity, right=1.8cm of users] (sessions) {
+        \textbf{sessions}\\
+        \texttt{id} \ PK\\
+        \texttt{user\_id} \ FK\\
+        \texttt{gym\_name}\\
+        \texttt{start\_time}\\
+        \texttt{end\_time} \ nullable\\
+        \texttt{notes} \ nullable
+      };
+
+      \node[entity, right=1.8cm of sessions] (climbs) {
+        \textbf{climbs}\\
+        \texttt{id} \ PK\\
+        \texttt{session\_id} \ FK\\
+        \texttt{grade}\\
+        \texttt{attempts}\\
+        \texttt{topped} \ 0/1\\
+        \texttt{zones}\\
+        \texttt{image\_path} \ nullable
+      };
+
+      \draw[rel] (sessions.west) -- node[above,font=\tiny]{1\hspace{6pt}} (users.east)
+                 node[near start, above, font=\tiny]{\hspace{-6pt}N};
+      \draw[rel] (climbs.west) -- node[above,font=\tiny]{1\hspace{6pt}} (sessions.east)
+                 node[near start, above, font=\tiny]{\hspace{-6pt}N};
+    \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.1cm}
+    \texttt{end\_time IS NULL} is used as a sentinel to distinguish active from
+    completed sessions. Duration is always calculated as
+    \texttt{end\_time~-~start\_time} at query time --- it is never stored,
+    avoiding stale data if a session is edited.
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+
+% ============ COLUMN 3 ============
+\begin{column}{\colwidth}
+
+  \begin{block}{Authentication Sequence}
+    Mobile login flow, from tap to authenticated state:
+
+    \vspace{0.1cm}
+    \begin{center}
+    \begin{tikzpicture}[
+      font=\footnotesize,
+      life/.style={draw, thick},
+      msg/.style={-{Latex[length=2mm]}, thin},
+      ret/.style={-{Latex[length=2mm]}, thin, dashed},
+      self/.style={thin},
+    ]
+      % Lifeline headers
+      \node (A) at (0,0)   {\textbf{Mobile App}};
+      \node (B) at (4.5,0) {\textbf{Express Server}};
+      \node (C) at (8.5,0) {\textbf{SQLite}};
+
+      \draw[life] (0,-0.3)   -- (0,-9.0);
+      \draw[life] (4.5,-0.3) -- (4.5,-9.0);
+      \draw[life] (8.5,-0.3) -- (8.5,-9.0);
+
+      % 1. Login request
+      \draw[msg] (0,-1.0) -- node[above,font=\tiny]
+        {POST /api/auth/login \{email, password\}} (4.5,-1.0);
+
+      % 2. DB query
+      \draw[msg] (4.5,-1.9) -- node[above,font=\tiny]
+        {SELECT * FROM users WHERE email = ?} (8.5,-1.9);
+
+      % 3. DB response
+      \draw[ret] (8.5,-2.6) -- node[above,font=\tiny]
+        {user row} (4.5,-2.6);
+
+      % 4. bcrypt self-loop
+      \draw[self] (4.5,-3.2) -- (4.8,-3.2) -- (4.8,-3.8) -- (4.5,-3.8);
+      \draw[msg,self] (4.8,-3.8) -- (4.5,-3.8);
+      \node[font=\tiny,align=left] at (6.3,-3.5)
+        {bcrypt.compare(password, hash)};
+
+      % 5. jwt.sign self-loop
+      \draw[self] (4.5,-4.4) -- (4.8,-4.4) -- (4.8,-5.0) -- (4.5,-5.0);
+      \draw[msg,self] (4.8,-5.0) -- (4.5,-5.0);
+      \node[font=\tiny,align=left] at (6.5,-4.7)
+        {jwt.sign(\{userId\}, secret, 7d)};
+
+      % 6. Return token
+      \draw[ret] (4.5,-5.7) -- node[above,font=\tiny]
+        {\{token, user\}} (0,-5.7);
+
+      % 7. AsyncStorage self-loop
+      \draw[self] (0,-6.4) -- (-0.4,-6.4) -- (-0.4,-7.0) -- (0,-7.0);
+      \draw[msg,self] (-0.4,-7.0) -- (0,-7.0);
+      \node[font=\tiny,align=left] at (2.1,-6.7)
+        {AsyncStorage.multiSet([token, user])};
+
+      % 8. Navigate
+      \draw[self] (0,-7.7) -- (-0.4,-7.7) -- (-0.4,-8.3) -- (0,-8.3);
+      \draw[msg,self] (-0.4,-8.3) -- (0,-8.3);
+      \node[font=\tiny,align=left] at (1.8,-8.0)
+        {navigate to home screen};
+
+    \end{tikzpicture}
+    \end{center}
+  \end{block}
+
+  \begin{block}{Key Design Decisions}
+    \heading{Session-first workflow}
+    Users must start a session (with a gym name) before logging climbs.
+    This reflects real climbing behaviour --- one gym visit equals one session,
+    with multiple climbs beneath it. It also enables session-level statistics
+    (total climbs, duration, top rate) and prevents orphaned climb records.
+
+    \vspace{0.1cm}
+    \heading{One active session per user}
+    Before creating a new session the server checks for an existing row
+    where \texttt{end\_time IS NULL}. If one exists, its ID is returned so the
+    client can navigate directly to it. This mirrors physical reality (a climber
+    cannot be at two gyms simultaneously) and prevents duplicate active sessions
+    accumulating in the database.
+
+    \vspace{0.1cm}
+    \heading{Dual authentication strategy}
+    The web app uses cookie sessions because browsers manage the cookie jar
+    automatically. The mobile app cannot share that jar across network requests,
+    so a JWT is issued on login, stored in \texttt{AsyncStorage}, and attached to
+    every subsequent request as a \texttt{Bearer} token. Both strategies share
+    the same user table and bcrypt password hashing.
+
+    \vspace{0.1cm}
+    \heading{Optional image uploads}
+    Climb photos are nullable in the schema. This lowers the barrier to quick
+    logging, accommodates gyms with photography restrictions, and reduces
+    storage pressure without changing the data model.
+  \end{block}
+
+  \begin{block}{Features}
+    \begin{itemize}\setlength\itemsep{2pt}
+      \item User registration and login shared across web and mobile
+      \item Start and end timed climbing sessions with gym name
+      \item Log individual climbs: V-scale grade, attempts, topped status,
+            zones reached, optional photo
+      \item Public session feed visible to all users (most recent 20)
+      \item Personal session history with per-session climb detail
+      \item Mobile app state persisted across restarts via \texttt{AsyncStorage}
+      \item Server hosted on a VPS; mobile app connects to the live endpoint
+    \end{itemize}
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+\end{columns}
+\end{frame}
+
+\end{document}
