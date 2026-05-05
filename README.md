@@ -74,7 +74,7 @@ Scan the QR code with Expo Go, or run on a simulator with `npm run android` / `n
 
 ## Deployment
 
-The web server is hosted at `dr-aj313798.kemeneth.net`. The mobile app connects to this endpoint for all API calls.
+The web server is hosted at `bloc-production.up.railway.app`. The mobile app connects to this endpoint for all API calls.
 
 ## Author
 

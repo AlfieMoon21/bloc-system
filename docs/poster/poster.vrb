@@ -5,54 +5,51 @@
 \begin{column}{\colwidth}
 
   \begin{block}{The Bloc System}
-    Bloc is a bouldering session tracker built as a distributed web service.
-    Climbers can log gym sessions and individual climbs from a browser or a
-    mobile phone, with all data shared in real time through a single backend.
+    Bloc tracks bouldering sessions. Climbers log gym visits and individual
+    climbs from a browser or a phone; all data goes to the same backend, so
+    both views stay in sync.
 
     \vspace{0.15cm}
-    The system was designed to demonstrate a core distributed systems pattern:
+    The project is built around one distributed systems pattern:
     \textbf{multiple independent clients sharing a common server and data store}.
-    Neither client holds authoritative state --- both read and write through the
-    same REST API, so a session started on the web is immediately visible on
-    the mobile app and vice versa.
+    Neither client holds state locally --- both read and write through the same
+    REST API, so a session started on the web shows up immediately in the
+    mobile app.
 
     \vspace{0.15cm}
-    \textbf{Deployed at:} \texttt{dr-aj313798.kemeneth.net}
+    \textbf{Hosted on:} a Linux VPS running Node.js
   \end{block}
 
+  \vspace{-0.7cm}
   \begin{block}{System Architecture}
 
     \begin{center}
     \begin{tikzpicture}[
-      node distance=1.1cm and 1.6cm,
-      box/.style={draw, rounded corners, fill=gray!12, inner sep=8pt,
-                  font=\small, text width=3.2cm, align=center},
-      sbox/.style={draw, rounded corners, fill=blue!12, inner sep=8pt,
-                   font=\small, text width=3.2cm, align=center},
-      dbbox/.style={draw, cylinder, shape border rotate=90,
-                    fill=orange!15, inner sep=6pt, font=\small, align=center,
-                    aspect=0.25},
-      arr/.style={-{Latex[length=2.5mm]}, thick},
+      font=\small,
+      box/.style={draw, rounded corners, fill=gray!12, inner sep=10pt,
+                  text width=3.4cm, align=center},
+      sbox/.style={draw, rounded corners, fill=blue!12, inner sep=10pt,
+                   text width=3.4cm, align=center},
+      dbbox/.style={draw, cylinder, shape border rotate=90, fill=orange!15,
+                    inner sep=8pt, align=center, aspect=0.3},
+      arr/.style={latex-latex, thick},
     ]
-      \node[box]  (web)    {Web Browser\\{\footnotesize Handlebars views\\cookie session}};
-      \node[box]  (mob)    [below=1.5cm of web] {Mobile App\\{\footnotesize React Native / Expo\\JWT bearer token}};
-      \node[sbox] (api)    [right=2.2cm of web, yshift=-0.75cm]
-                           {Express Server\\{\footnotesize Node.js\\REST API}};
-      \node[dbbox](db)     [right=2.0cm of api] {SQLite\\DB};
+      \node[box]  (web) at (0, 1.6)  {Web Browser\\[2pt]{\footnotesize Handlebars\\cookie session}};
+      \node[box]  (mob) at (0, -1.6) {Mobile App\\[2pt]{\footnotesize React Native\\JWT bearer}};
+      \node[sbox] (api) at (5.5, 0)  {Express Server\\[2pt]{\footnotesize Node.js\\REST API}};
+      \node[dbbox](db)  at (10.5, 0) {SQLite\\DB};
 
-      \draw[arr] (web.east) -- node[above,font=\tiny]{HTTP/HTTPS} (api.west |- web.east);
-      \draw[arr] (mob.east) -- node[below,font=\tiny]{HTTPS + JWT} (api.west |- mob.east);
-      \draw[arr] ([xshift=2pt]api.east) -- node[above,font=\tiny]{SQL} (db.west);
-      \draw[arr] (db.west)  -- ([xshift=-2pt]api.east);
+      \draw[arr] (web.east) -- node[above,sloped,font=\footnotesize]{HTTP/HTTPS} (api.north west);
+      \draw[arr] (mob.east) -- node[below,sloped,font=\footnotesize]{HTTPS + JWT} (api.south west);
+      \draw[arr] (api.east) -- node[above,font=\footnotesize]{SQL queries} (db.west);
     \end{tikzpicture}
     \end{center}
 
     \vspace{0.1cm}
-    The web app uses cookie-based sessions (Express-session) because browsers
-    handle cookies natively. The mobile app cannot share that cookie jar, so it
-    authenticates with JWTs sent in the \texttt{Authorization: Bearer} header.
-    Both paths share the same database rows --- the distribution point is
-    purely in the protocol layer, not the data layer.
+    Browsers handle cookies automatically, so the web app uses cookie-based
+    sessions. The mobile app has no shared cookie jar --- it sends a JWT in
+    every \texttt{Authorization: Bearer} header instead. Both clients hit the
+    same database rows.
   \end{block}
 
   \begin{block}{Technology Stack}
@@ -68,10 +65,43 @@
     Auth (web)      & bcrypt + express-session \\
     Auth (mobile)   & bcrypt + JWT (jsonwebtoken) \\
     File uploads    & Multer (5\,MB limit, image validation) \\
-    Hosting         & VPS at \texttt{kemeneth.net} \\
+    Hosting         & Linux VPS (Node.js, port 3000) \\
     \bottomrule
     \end{tabular}
     \end{center}
+  \end{block}
+
+  \begin{block}{Core Features}
+    \begin{itemize}\setlength\itemsep{2pt}
+      \item \textbf{Timed sessions} --- start a session at a named gym;
+            \texttt{end\_time} is stamped when the user finishes
+      \item \textbf{Climb logging} --- grade (V-scale), attempts, topped
+            status, zones reached, optional photo per climb
+      \item \textbf{Photo uploads} --- \texttt{multipart/form-data} via
+            Multer; stored in \texttt{public/uploads/} and served as
+            static files; nullable in the schema
+      \item \textbf{Public feed} --- all completed sessions visible to
+            every user; lets climbers see what others at the gym have logged
+      \item \textbf{Shared state} --- web and mobile read the same rows;
+            no synchronisation layer required
+      \item \textbf{Single active session} --- enforced at query level
+            (\texttt{end\_time IS NULL}), consistent across both clients
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Future Development}
+    \begin{itemize}\setlength\itemsep{2pt}
+      \item \textbf{Grade progression charts} --- visualise topped percentage
+            per grade over time using session history already in the database
+      \item \textbf{Object storage for images} --- replace \texttt{public/uploads/}
+            with S3-compatible storage to decouple files from the server process
+      \item \textbf{PostgreSQL migration} --- \texttt{db.js} is the only module
+            to change; the rest of the stack is database-agnostic
+      \item \textbf{Push notifications} --- alert a user when a friend logs a
+            session at the same gym, using the public feed as the data source
+      \item \textbf{Offline logging} --- queue climbs locally when the device
+            has no signal and sync when connectivity returns
+    \end{itemize}
   \end{block}
 
   \begin{block}{References}
@@ -80,8 +110,10 @@
       \item Fielding, R.\ T.\ (2000). \textit{Architectural Styles and the Design of Network-based Software Architectures}. University of California, Irvine.
       \item Jones, M.\ B., Bradley, J., \& Sakimura, N.\ (2015). \textit{JSON Web Token (JWT)}. RFC 7519. IETF.
       \item Provos, N., \& Mazieres, D.\ (1999). \textit{A Future-Adaptable Password Scheme}. USENIX Annual Technical Conference.
-      \item Express.js documentation: \texttt{https://expressjs.com}
-      \item Expo documentation: \texttt{https://docs.expo.dev}
+      \item Express.js documentation: \texttt{expressjs.com}
+      \item Expo documentation: \texttt{docs.expo.dev}
+      \item React Native documentation: \texttt{reactnative.dev}
+      \item Multer documentation: \texttt{github.com/expressjs/multer}
     \end{itemize}
   \end{block}
 
@@ -93,9 +125,9 @@
 \begin{column}{\colwidth}
 
   \begin{block}{REST API Design}
-    Eight endpoints form the mobile API. All session and climb routes are
-    protected by the \texttt{requireApiAuth} middleware, which verifies the JWT
-    and injects \texttt{req.userId} before the route handler runs.
+    The mobile API has eight endpoints. All session and climb routes go
+    through \texttt{requireApiAuth}, which verifies the JWT and attaches
+    \texttt{req.userId} before the route handler runs.
 
     \vspace{0.1cm}
     \begin{center}
@@ -116,12 +148,23 @@
     \end{center}
 
     \vspace{0.1cm}
-    The public feed (\texttt{GET /api/feed}) returns the 20 most recent
-    completed sessions with climb counts, using a SQL \texttt{LEFT JOIN} so
-    sessions with zero climbs still appear.
+    \texttt{GET /api/feed} returns the 20 most recent completed sessions with
+    climb counts, using a \texttt{LEFT JOIN} so sessions with no climbs still
+    appear.
   \end{block}
 
-  \begin{exampleblock}{JWT Authentication Middleware}
+  \begin{alertblock}{The Mobile Auth Challenge}
+    Cookie sessions work for browsers because the browser attaches the cookie
+    to every same-origin request automatically. Mobile HTTP clients have no
+    shared cookie jar --- each request arrives with no identity attached.
+
+    \vspace{0.1cm}
+    Sending the session ID manually would mimic cookie behaviour, but without
+    the browser's built-in protections. A JWT with its own expiry is the right
+    call for a stateless HTTP client.
+  \end{alertblock}
+
+  \begin{exampleblock}{Solution: JWT Authentication Middleware}
 
 \begin{lstlisting}
 const requireApiAuth = (req, res, next) => {
@@ -142,14 +185,15 @@ const requireApiAuth = (req, res, next) => {
 \end{lstlisting}
 
     \vspace{0.1cm}
-    Tokens are signed with \texttt{HS256} and expire after 7 days. The mobile
-    app stores the token in \texttt{AsyncStorage} and restores it on launch,
-    keeping the user logged in across app restarts without re-authenticating.
+    Tokens are signed with \texttt{HS256} and expire after 7 days. The app
+    keeps the token in React Context and attaches it to every request; the JWT
+    encodes the user identity directly, so no session state is needed on the
+    server.
   \end{exampleblock}
 
   \begin{block}{Database Schema}
-    Three tables with cascading foreign keys. All state lives in SQLite ---
-    neither client caches authoritative data locally.
+    Three tables with cascading foreign keys. All state lives in SQLite;
+    neither client caches data locally.
 
     \vspace{0.2cm}
     \begin{center}
@@ -196,10 +240,27 @@ const requireApiAuth = (req, res, next) => {
     \end{center}
 
     \vspace{0.1cm}
-    \texttt{end\_time IS NULL} is used as a sentinel to distinguish active from
-    completed sessions. Duration is always calculated as
-    \texttt{end\_time~-~start\_time} at query time --- it is never stored,
-    avoiding stale data if a session is edited.
+    \texttt{end\_time IS NULL} means the session is still running. Duration is
+    calculated from \texttt{end\_time~-~start\_time} at query time and never
+    stored, so editing a session cannot produce stale totals.
+  \end{block}
+
+  \begin{block}{Web Client vs Mobile Client}
+    \begin{center}
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{Property} & \textbf{Web Browser} & \textbf{Mobile App} \\
+    \midrule
+    Technology      & Express + Handlebars & React Native / Expo \\
+    Auth mechanism  & Cookie session       & JWT Bearer token \\
+    Auth middleware & \texttt{requireAuth} & \texttt{requireApiAuth} \\
+    Image upload    & HTML form (POST)     & \texttt{FormData} (fetch) \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    \vspace{0.1cm}
+    Both clients share the same database --- the difference is in how they
+    authenticate, not what they store.
   \end{block}
 
 \end{column}
@@ -214,108 +275,137 @@ const requireApiAuth = (req, res, next) => {
 
     \vspace{0.1cm}
     \begin{center}
+    \resizebox{\linewidth}{!}{%
     \begin{tikzpicture}[
-      font=\footnotesize,
+      font=\scriptsize,
       life/.style={draw, thick},
-      msg/.style={-{Latex[length=2mm]}, thin},
-      ret/.style={-{Latex[length=2mm]}, thin, dashed},
-      self/.style={thin},
+      msg/.style={-{Latex[length=3mm]}, thick},
+      ret/.style={-{Latex[length=3mm]}, thick, dashed},
+      self/.style={thick},
     ]
-      % Lifeline headers
-      \node (A) at (0,0)   {\textbf{Mobile App}};
-      \node (B) at (4.5,0) {\textbf{Express Server}};
-      \node (C) at (8.5,0) {\textbf{SQLite}};
+      \node (A) at (0,0)    {\textbf{Mobile App}};
+      \node (B) at (6.0,0)  {\textbf{Express}};
+      \node (C) at (11.5,0) {\textbf{SQLite}};
 
-      \draw[life] (0,-0.3)   -- (0,-9.0);
-      \draw[life] (4.5,-0.3) -- (4.5,-9.0);
-      \draw[life] (8.5,-0.3) -- (8.5,-9.0);
+      \draw[life] (0,-0.35)    -- (0,-9.2);
+      \draw[life] (6.0,-0.35)  -- (6.0,-9.2);
+      \draw[life] (11.5,-0.35) -- (11.5,-9.2);
 
       % 1. Login request
-      \draw[msg] (0,-1.0) -- node[above,font=\tiny]
-        {POST /api/auth/login \{email, password\}} (4.5,-1.0);
+      \draw[msg] (0,-1.0) -- node[above]{POST /api/auth/login} (6.0,-1.0);
 
       % 2. DB query
-      \draw[msg] (4.5,-1.9) -- node[above,font=\tiny]
-        {SELECT * FROM users WHERE email = ?} (8.5,-1.9);
+      \draw[msg] (6.0,-2.0) -- node[above]{SELECT * FROM users WHERE email=?} (11.5,-2.0);
 
       % 3. DB response
-      \draw[ret] (8.5,-2.6) -- node[above,font=\tiny]
-        {user row} (4.5,-2.6);
+      \draw[ret] (11.5,-2.9) -- node[above]{user row} (6.0,-2.9);
 
       % 4. bcrypt self-loop
-      \draw[self] (4.5,-3.2) -- (4.8,-3.2) -- (4.8,-3.8) -- (4.5,-3.8);
-      \draw[msg,self] (4.8,-3.8) -- (4.5,-3.8);
-      \node[font=\tiny,align=left] at (6.3,-3.5)
-        {bcrypt.compare(password, hash)};
+      \draw[self] (6.0,-3.6) -- (6.5,-3.6) -- (6.5,-4.2) -- (6.0,-4.2);
+      \draw[msg,self] (6.5,-4.2) -- (6.0,-4.2);
+      \node[align=left] at (9.0,-3.9) {bcrypt.compare(pwd, hash)};
 
       % 5. jwt.sign self-loop
-      \draw[self] (4.5,-4.4) -- (4.8,-4.4) -- (4.8,-5.0) -- (4.5,-5.0);
-      \draw[msg,self] (4.8,-5.0) -- (4.5,-5.0);
-      \node[font=\tiny,align=left] at (6.5,-4.7)
-        {jwt.sign(\{userId\}, secret, 7d)};
+      \draw[self] (6.0,-4.9) -- (6.5,-4.9) -- (6.5,-5.5) -- (6.0,-5.5);
+      \draw[msg,self] (6.5,-5.5) -- (6.0,-5.5);
+      \node[align=left] at (8.8,-5.2) {jwt.sign(\{userId\}, 7d)};
 
       % 6. Return token
-      \draw[ret] (4.5,-5.7) -- node[above,font=\tiny]
-        {\{token, user\}} (0,-5.7);
+      \draw[ret] (6.0,-6.3) -- node[above]{\{token, user\}} (0,-6.3);
 
-      % 7. AsyncStorage self-loop
-      \draw[self] (0,-6.4) -- (-0.4,-6.4) -- (-0.4,-7.0) -- (0,-7.0);
-      \draw[msg,self] (-0.4,-7.0) -- (0,-7.0);
-      \node[font=\tiny,align=left] at (2.1,-6.7)
-        {AsyncStorage.multiSet([token, user])};
+      % 7. Store token
+      \draw[self] (0,-7.1) -- (-0.55,-7.1) -- (-0.55,-7.7) -- (0,-7.7);
+      \draw[msg,self] (-0.55,-7.7) -- (0,-7.7);
+      \node[align=left] at (2.5,-7.4) {store token in Context};
 
       % 8. Navigate
-      \draw[self] (0,-7.7) -- (-0.4,-7.7) -- (-0.4,-8.3) -- (0,-8.3);
-      \draw[msg,self] (-0.4,-8.3) -- (0,-8.3);
-      \node[font=\tiny,align=left] at (1.8,-8.0)
-        {navigate to home screen};
+      \draw[self] (0,-8.3) -- (-0.55,-8.3) -- (-0.55,-8.9) -- (0,-8.9);
+      \draw[msg,self] (-0.55,-8.9) -- (0,-8.9);
+      \node[align=left] at (2.1,-8.6) {navigate to home};
 
-    \end{tikzpicture}
+    \end{tikzpicture}}% end resizebox
     \end{center}
   \end{block}
 
   \begin{block}{Key Design Decisions}
     \heading{Session-first workflow}
-    Users must start a session (with a gym name) before logging climbs.
-    This reflects real climbing behaviour --- one gym visit equals one session,
-    with multiple climbs beneath it. It also enables session-level statistics
-    (total climbs, duration, top rate) and prevents orphaned climb records.
+    You have to start a session before logging a climb. One gym visit, one
+    session; climbs cannot exist without one.
 
     \vspace{0.1cm}
     \heading{One active session per user}
-    Before creating a new session the server checks for an existing row
-    where \texttt{end\_time IS NULL}. If one exists, its ID is returned so the
-    client can navigate directly to it. This mirrors physical reality (a climber
-    cannot be at two gyms simultaneously) and prevents duplicate active sessions
-    accumulating in the database.
+    Before inserting a new session the server checks for an existing row where
+    \texttt{end\_time IS NULL}. If one exists, its ID comes back in the
+    response so the client goes straight to it.
 
     \vspace{0.1cm}
-    \heading{Dual authentication strategy}
-    The web app uses cookie sessions because browsers manage the cookie jar
-    automatically. The mobile app cannot share that jar across network requests,
-    so a JWT is issued on login, stored in \texttt{AsyncStorage}, and attached to
-    every subsequent request as a \texttt{Bearer} token. Both strategies share
-    the same user table and bcrypt password hashing.
+    \heading{Dual auth}
+    Browsers get a cookie session handled automatically; mobile clients get a
+    signed JWT stored in React Context and sent as \texttt{Authorization: Bearer}.
+    Same \texttt{users} table, same bcrypt hashes --- only the transport differs.
+  \end{block}
+
+  \begin{block}{Log-Climb Sequence (Distributed Flow)}
+    Adding a climb crosses three service boundaries in one action: JWT
+    auth, file storage, and a database write.
 
     \vspace{0.1cm}
-    \heading{Optional image uploads}
-    Climb photos are nullable in the schema. This lowers the barrier to quick
-    logging, accommodates gyms with photography restrictions, and reduces
-    storage pressure without changing the data model.
+    \begin{center}
+    \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+      font=\scriptsize,
+      life/.style={draw, thick},
+      msg/.style={-{Latex[length=3mm]}, thick},
+      ret/.style={-{Latex[length=3mm]}, thick, dashed},
+      self/.style={thick},
+    ]
+      \node (A) at (0,0)    {\textbf{Mobile}};
+      \node (B) at (4.5,0)  {\textbf{Server}};
+      \node (C) at (8.5,0)  {\textbf{Multer}};
+      \node (D) at (13.0,0) {\textbf{SQLite}};
+
+      \draw[life] (0,-0.35)    -- (0,-7.8);
+      \draw[life] (4.5,-0.35)  -- (4.5,-7.8);
+      \draw[life] (8.5,-0.35)  -- (8.5,-7.8);
+      \draw[life] (13.0,-0.35) -- (13.0,-7.8);
+
+      % 1. POST with JWT + multipart
+      \draw[msg] (0,-0.9) -- node[above]{POST /api/sessions/:id/climbs + Bearer JWT} (4.5,-0.9);
+
+      % 2. jwt.verify
+      \draw[self] (4.5,-1.6) -- (5.0,-1.6) -- (5.0,-2.1) -- (4.5,-2.1);
+      \draw[msg,self] (5.0,-2.1) -- (4.5,-2.1);
+      \node[align=left] at (7.0,-1.85) {jwt.verify $\to$ req.userId};
+
+      % 3. Multer validate + save
+      \draw[msg] (4.5,-2.7) -- node[above]{validate + save image} (8.5,-2.7);
+
+      % 4. Write file
+      \draw[self] (8.5,-3.3) -- (9.0,-3.3) -- (9.0,-3.8) -- (8.5,-3.8);
+      \draw[msg,self] (9.0,-3.8) -- (8.5,-3.8);
+      \node[align=left] at (11.0,-3.55) {write to /uploads/};
+
+      % 5. Return path
+      \draw[ret] (8.5,-4.4) -- node[above]{image\_path} (4.5,-4.4);
+
+      % 6. INSERT climb
+      \draw[msg] (4.5,-5.0) -- node[above]{INSERT INTO climbs} (13.0,-5.0);
+
+      % 7. climbId
+      \draw[ret] (13.0,-5.7) -- node[above]{climbId} (4.5,-5.7);
+
+      % 8. 200 response
+      \draw[ret] (4.5,-6.4) -- node[above]{200 \{climbId\}} (0,-6.4);
+
+      % 9. Re-render
+      \draw[self] (0,-7.1) -- (-0.5,-7.1) -- (-0.5,-7.7) -- (0,-7.7);
+      \draw[msg,self] (-0.5,-7.7) -- (0,-7.7);
+      \node[align=left] at (1.8,-7.4) {re-render climb list};
+
+    \end{tikzpicture}}% end resizebox
+    \end{center}
   \end{block}
 
-  \begin{block}{Features}
-    \begin{itemize}\setlength\itemsep{2pt}
-      \item User registration and login shared across web and mobile
-      \item Start and end timed climbing sessions with gym name
-      \item Log individual climbs: V-scale grade, attempts, topped status,
-            zones reached, optional photo
-      \item Public session feed visible to all users (most recent 20)
-      \item Personal session history with per-session climb detail
-      \item Mobile app state persisted across restarts via \texttt{AsyncStorage}
-      \item Server hosted on a VPS; mobile app connects to the live endpoint
-    \end{itemize}
-  \end{block}
 
 \end{column}
 

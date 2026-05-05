@@ -1,4 +1,4 @@
-export const API_URL = 'https://alannah-irredeemable-vivien.ngrok-free.dev';
+export const API_URL = 'https://bloc-production.up.railway.app';
 
 let authToken: string | null = null;
 

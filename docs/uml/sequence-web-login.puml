@@ -1,0 +1,52 @@
+@startuml sequence-web-login
+title Bloc — Login Sequence (Web Browser Client)
+
+skinparam sequenceArrowThickness 1.5
+skinparam responseMessageBelowArrow true
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #E8F4F8
+skinparam participantBorderColor #4A90D9
+skinparam sequenceLifeLineBorderColor #AAAAAA
+skinparam noteBackgroundColor #FFFDE7
+
+actor "User" as user
+participant "Web Browser" as browser
+participant "Express\n/login" as server
+participant "express-session\n(cookie)" as sessionMW
+database "SQLite" as db
+
+user -> browser : navigates to /login\nenters email + password\nsubmits form (POST)
+
+browser -> server : POST /login\nContent-Type: application/x-www-form-urlencoded\n{ email, password }
+activate server
+
+server -> db : SELECT * FROM users WHERE email = ?
+activate db
+db --> server : user row (or null)
+deactivate db
+
+alt user not found or password mismatch
+  server --> browser : re-render /login\nwith error message
+  browser -> user : "Invalid email or password"
+else credentials valid
+  server -> sessionMW : req.session.userId = user.id
+  activate sessionMW
+  note right : express-session serialises\nuserId into a signed cookie
+  sessionMW --> server : session saved
+  deactivate sessionMW
+
+  server --> browser : 302 Redirect → /\nSet-Cookie: connect.sid=<signed-session-id>; HttpOnly
+  deactivate server
+
+  browser -> browser : stores session cookie\n(sent automatically on all\nsubsequent same-origin requests)
+  browser -> user : lands on homepage /
+end
+
+note over browser, server
+  All subsequent requests to protected routes
+  automatically include the session cookie.
+  Express-session reads it and populates req.session.userId
+  without any action required from the browser JS.
+end note
+
+@enduml

@@ -1,0 +1,86 @@
+@startuml component-diagram
+title Bloc — Component Diagram
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam componentBackgroundColor #E8F4F8
+skinparam componentBorderColor #4A90D9
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageBorderColor #AAAAAA
+skinparam arrowColor #555555
+skinparam noteBackgroundColor #FFFDE7
+
+package "Client — Mobile (React Native / Expo)" {
+  [Login Screen] as loginScreen
+  [Register Screen] as registerScreen
+  [Feed Screen] as feedScreen
+  [Sessions Screen] as sessionsScreen
+  [Session Detail Screen] as sessionDetailScreen
+  [Auth Context] as authCtx
+  [api.ts\n(HTTP service)] as apiService
+
+  loginScreen --> authCtx
+  registerScreen --> authCtx
+  authCtx --> apiService
+  feedScreen --> apiService
+  sessionsScreen --> apiService
+  sessionDetailScreen --> apiService
+}
+
+package "Client — Web Browser" {
+  [Handlebars Templates\n(server-rendered HTML)] as webViews
+  note right of webViews
+    No JS framework —
+    all rendering done
+    server-side by Express
+  end note
+}
+
+package "Server — Node.js / Express" {
+  package "Middleware" {
+    [CORS] as cors
+    [express-session\n(cookie auth)] as sessionMW
+    [requireAuth\n(web cookie check)] as reqAuth
+    [requireApiAuth\n(JWT Bearer check)] as reqApiAuth
+    [Multer\n(multipart/form-data)] as multer
+    [locals.js\n(injects user & activeSession)] as locals
+  }
+
+  package "Routes" {
+    [Web Routes  /] as webRoutes
+    [API Routes  /api] as apiRoutes
+  }
+
+  [db.js\n(SQLite singleton)] as dbSingleton
+}
+
+package "Persistence" {
+  database "SQLite\n(database.db)" as sqlite {
+    [users]
+    [sessions]
+    [climbs]
+  }
+  folder "public/uploads/\n(image files)" as uploads
+}
+
+' Web browser flow
+webViews <--> webRoutes : HTTP GET/POST\n(form submissions)
+webRoutes --> reqAuth
+webRoutes --> locals
+webRoutes --> dbSingleton
+
+' Mobile flow
+apiService --> apiRoutes : HTTPS JSON\n(Bearer JWT)
+apiService --> apiRoutes : multipart/form-data\n(climb + photo)
+apiRoutes --> reqApiAuth
+apiRoutes --> multer
+apiRoutes --> dbSingleton
+
+' Shared persistence
+dbSingleton --> sqlite
+multer --> uploads
+
+' CORS enables cross-origin from mobile
+cors -[dashed]-> apiRoutes : preflight\nOPTIONS
+
+@enduml

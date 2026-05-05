@@ -1,0 +1,61 @@
+@startuml er-diagram
+title Bloc — Entity-Relationship Diagram
+
+hide circle
+skinparam linetype ortho
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #888888
+skinparam classHeaderBackgroundColor #E8F4F8
+
+entity "users" as users {
+  * id : INTEGER <<PK>>
+  --
+  * email : TEXT <<UNIQUE>>
+  * password : TEXT
+  * username : TEXT
+  created_at : DATETIME
+}
+
+entity "sessions" as sessions {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  * gym_name : TEXT
+  * start_time : DATETIME
+  end_time : DATETIME
+  notes : TEXT
+  created_at : DATETIME
+}
+
+entity "climbs" as climbs {
+  * id : INTEGER <<PK>>
+  --
+  * session_id : INTEGER <<FK>>
+  * grade : TEXT
+  * attempts : INTEGER
+  * topped : BOOLEAN
+  zones : INTEGER
+  description : TEXT
+  image_path : TEXT
+  created_at : DATETIME
+}
+
+users ||--o{ sessions : "starts (user_id)"
+sessions ||--o{ climbs : "contains (session_id)"
+
+note bottom of sessions
+  end_time is NULL while the
+  session is still active.
+  Only one active session
+  per user is enforced in
+  application logic.
+end note
+
+note right of climbs
+  image_path stores a relative
+  URL (/uploads/<filename>)
+  served from public/.
+  NULL when no photo uploaded.
+end note
+
+@enduml

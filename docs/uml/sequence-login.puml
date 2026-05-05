@@ -1,0 +1,62 @@
+@startuml sequence-login
+title Bloc — Login Sequence (Mobile Client)
+
+skinparam sequenceArrowThickness 1.5
+skinparam responseMessageBelowArrow true
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #E8F4F8
+skinparam participantBorderColor #4A90D9
+skinparam sequenceLifeLineBorderColor #AAAAAA
+skinparam noteBackgroundColor #FFFDE7
+
+actor "User" as user
+participant "Login Screen\n(React Native)" as screen
+participant "api.ts" as api
+participant "Express Server\n/api/auth/login" as server
+participant "requireApiAuth" as authMW
+database "SQLite\ndatabase.db" as db
+
+user -> screen : enters email + password\ntaps "Log In"
+activate screen
+
+screen -> api : api.login(email, password)
+activate api
+
+api -> server : POST /api/auth/login\n{ email, password }
+activate server
+
+server -> db : SELECT * FROM users\nWHERE email = ?
+activate db
+db --> server : user row (or null)
+deactivate db
+
+alt user not found
+  server --> api : 401 { error: "User not found" }
+  api --> screen : result.error
+  screen -> user : shows error message
+else user found
+  server -> server : bcrypt.compare(password, hash)
+  note right : compares submitted password\nagainst stored bcrypt hash\n(never stores plaintext)
+
+  alt password mismatch
+    server --> api : 401 { error: "Invalid password" }
+    api --> screen : result.error
+    screen -> user : shows error message
+  else credentials valid
+    server -> server : jwt.sign({ userId }, JWT_SECRET,\n{ expiresIn: "7d" })
+    server --> api : 200 { token, user: { id, username, email } }
+    deactivate server
+
+    api -> api : setAuthToken(token)
+    note right : token stored in module\nscope for all future requests
+    api --> screen : { token, user }
+    deactivate api
+
+    screen -> screen : AuthContext.setUser(user)\nAuthContext.setToken(token)
+    screen -> user : navigates to main tab screen
+  end
+end
+
+deactivate screen
+
+@enduml

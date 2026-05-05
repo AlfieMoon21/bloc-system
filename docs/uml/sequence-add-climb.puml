@@ -1,0 +1,122 @@
+@startuml sequence-add-climb-final
+title Bloc — Add Climb Sequence (Mobile Client → API → Server)
+
+skinparam sequenceArrowThickness 1.5
+skinparam responseMessageBelowArrow true
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #E8F4F8
+skinparam participantBorderColor #4A90D9
+skinparam sequenceLifeLineBorderColor #AAAAAA
+skinparam noteBackgroundColor #FFFDE7
+
+actor "User" as user
+participant "Session Detail Screen" as screen
+participant "API Client" as api
+participant "Climb Routes (Express)" as server
+participant "requireApiAuth (JWT Middleware)" as authMW
+participant "Multer (Upload Middleware)" as multer
+database "SQLite Database" as db
+participant "File Storage (/public/uploads)" as fs
+
+== User Input ==
+user -> screen : Enter climb data\n(grade, attempts, topped,\nzones, description)
+user -> screen : (Optional) select image
+
+== Request Construction ==
+screen -> api : addClimb(sessionId, data, image?)
+activate api
+
+api -> api : Build FormData\n(append text fields)
+
+alt Image included
+  api -> api : Append image file
+  note right : Native: { uri, name, type }\nWeb: blob upload
+end
+
+api -> server : POST /api/sessions/:id/climbs\nAuthorization: Bearer JWT\nmultipart/form-data
+activate server
+
+note over api,server : Asynchronous HTTP request
+
+== Authentication ==
+server -> authMW : Validate JWT
+activate authMW
+
+alt Invalid / expired token
+  authMW --> api : 401 Unauthorized\n{ error: "Invalid or expired token" }
+  deactivate authMW
+  deactivate server
+
+  api --> screen : error response
+  deactivate api
+  screen -> user : Display auth error
+
+else Valid token
+  authMW -> authMW : Attach req.userId
+  authMW --> server : next()
+  deactivate authMW
+
+  == File Upload ==
+  server -> multer : upload.single("image")
+  activate multer
+
+  alt Image present
+    multer -> fs : Save file\n(unique filename)
+    activate fs
+    fs --> multer : filename
+    deactivate fs
+  end
+
+  multer --> server : next()
+  deactivate multer
+
+  server -> server : imagePath = file ? "/uploads/<filename>" : null
+
+  == Validation ==
+  server -> server : Validate request data
+
+  alt Invalid input
+    server --> api : 400 Bad Request\n{ error: "Invalid input" }
+    deactivate server
+
+    api --> screen : error response
+    deactivate api
+    screen -> user : Show validation error
+
+  else Valid input
+
+    == Database Operations ==
+    group Session Check + Insert
+      server -> db : SELECT session\nWHERE id & user match\nAND active
+      activate db
+      db --> server : session / null
+      deactivate db
+
+      alt Session invalid
+        server --> api : 404 Not Found\n{ error: "Active session not found" }
+        deactivate server
+
+        api --> screen : error response
+        deactivate api
+        screen -> user : Show error
+
+      else Session valid
+        server -> db : INSERT climb record
+        activate db
+        db --> server : new climbId
+        deactivate db
+
+        server --> api : 200 OK\n{ message: "Climb added", id }
+        deactivate server
+
+        api --> screen : success
+        deactivate api
+
+        screen -> screen : Refresh session data
+        screen -> user : Display new climb
+      end
+    end
+  end
+end
+
+@enduml
