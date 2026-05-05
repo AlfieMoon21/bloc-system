@@ -7,6 +7,9 @@ A distributed bouldering session tracker built for COMP204 (Distributed Systems)
 - **Live site:** https://bloc-production.up.railway.app
 - **Presentation:** https://docs.google.com/presentation/d/1rAcBW8GpqGUgIRTlzeQffiX7-sa3fTrjjedEQod0aAk/edit?usp=sharing
 
+## Business Plan
+https://docs.google.com/presentation/d/1rAcBW8GpqGUgIRTlzeQffiX7-sa3fTrjjedEQod0aAk/edit?usp=sharing
+
 ## Architecture
 
 ```
