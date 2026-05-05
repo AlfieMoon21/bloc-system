@@ -1,5 +1,5 @@
 # Fdb version 4
-["lualatex"] 1777979927.05227 "poster.tex" "poster.pdf" "poster" 1777979929.38801 0
+["lualatex"] 1777986884.67389 "poster.tex" "poster.pdf" "poster" 1777986887.19295 0
   "/home/moon/.texlive/texmf-var/luatex-cache/generic/fonts/otl/lato-bold.luc" 1774448382.3958 1525249 1508d6e8edaf940b1b33c5635f3c0143 ""
   "/home/moon/.texlive/texmf-var/luatex-cache/generic/fonts/otl/lato-bolditalic.luc" 1774448381.1958 1554204 d18ac729170b008324aeec07351ec622 ""
   "/home/moon/.texlive/texmf-var/luatex-cache/generic/fonts/otl/lato-italic.luc" 1774448383.6958 1580273 200b403b497f78bbcdc96d699c405253 ""
@@ -403,11 +403,11 @@
   "/var/lib/texmf/web2c/luahbtex/lualatex.fmt" 1774448222 5656910 e1b1163256e3a45317b0713bd5617893 ""
   "beamercolorthemegemini.sty" 1774820667.26683 1786 cdc57c45f5021ebe90e71d3a4bece540 ""
   "beamerthemegemini.sty" 1774820667.26673 6726 3b1744dffda098b55e3ae32b8d66ec7a ""
-  "poster.aux" 1777979929.10659 595 0c4a8a6d3317b7b34d7da3e30267e179 "lualatex"
-  "poster.nav" 1777979929.11066 307 9e520c26371a1250ff9fc1fe87f9c655 "lualatex"
-  "poster.out" 1777979928.58378 0 d41d8cd98f00b204e9800998ecf8427e "lualatex"
-  "poster.tex" 1777979921.16326 17404 b2ae35e5df200841fcee2bfdf665ed91 ""
-  "poster.vrb" 1777979928.67283 15526 ed1116c56daf6de5201167237e33f5d5 "lualatex"
+  "poster.aux" 1777986886.89658 595 0c4a8a6d3317b7b34d7da3e30267e179 "lualatex"
+  "poster.nav" 1777986886.89916 307 9e520c26371a1250ff9fc1fe87f9c655 "lualatex"
+  "poster.out" 1777986886.32966 0 d41d8cd98f00b204e9800998ecf8427e "lualatex"
+  "poster.tex" 1777986879.34902 17436 7370df252005158ec2941af5ac7d949c ""
+  "poster.vrb" 1777986886.41932 15526 ed1116c56daf6de5201167237e33f5d5 "lualatex"
   (generated)
   "poster.aux"
   "poster.log"
