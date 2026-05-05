@@ -1,6 +1,11 @@
 # Bloc
 
-A distributed bouldering session tracker built for COMP204 (Distributed Systems) at Falmouth University. Bloc allows climbers to log sessions and climbs from both a web browser and a mobile app, with all data shared through a single backend.
+A distributed bouldering session tracker built for COMP204 (Distributed Systems) at Falmouth University. Climbers log sessions and individual climbs from a web browser or a phone; all data goes to the same backend so both views stay in sync.
+
+## Links
+
+- **Live site:** https://bloc-production.up.railway.app
+- **Presentation:** https://docs.google.com/presentation/d/1rAcBW8GpqGUgIRTlzeQffiX7-sa3fTrjjedEQod0aAk/edit?usp=sharing
 
 ## Architecture
 
@@ -11,32 +16,39 @@ web views ──┘
 ```
 
 Two clients, one backend:
-- The **web app** is a server-rendered site for logging sessions from a browser
-- The **mobile app** is a React Native app for logging sessions on the go
-- Both read and write to the same database, so data is shared across clients in real time
+- The **web app** is a server-rendered site (Express + Handlebars) with cookie-based auth
+- The **mobile app** is a React Native / Expo app with JWT bearer auth
+- Both read and write to the same SQLite database
 
 ## Structure
 
 ```
-Bloc/
-├── mobile/          # React Native mobile app (Expo)
-├── web/             # Express web app + REST API
-├── docs/
-│   ├── uml/         # UML diagrams
-│   └── business-plan/
-└── README.md
+bloc-system/
+├── mobile/               # React Native mobile app (Expo)
+│   ├── app/              # Screens (Expo Router)
+│   ├── context/          # AuthContext (JWT storage)
+│   └── services/api.ts   # HTTP client for the REST API
+├── web/                  # Express web app + REST API
+│   ├── routes/api.js     # REST API consumed by the mobile app
+│   ├── routes/web.js     # Server-rendered HTML routes
+│   ├── middleware/       # auth, upload, locals
+│   ├── views/            # Handlebars templates
+│   └── server.js         # Entry point
+└── docs/
+    ├── uml/              # PlantUML diagrams (ER, component, sequence)
+    ├── business-plan/    # Business plan document
+    └── poster/           # COMP204 submission poster (LaTeX)
 ```
 
 ## Getting Started
 
-### Web (API + Website)
+### Web (API + website)
 
 ```bash
 cd web
 npm install
-cp .env.example .env   # add your SESSION_SECRET
-node init-database.js  # initialise the SQLite database
-node server.js
+cp .env.example .env      # set SESSION_SECRET and JWT_SECRET
+npm start                 # initialises the DB then starts the server
 ```
 
 Runs on `http://localhost:3000`
@@ -49,9 +61,9 @@ npm install
 npx expo start
 ```
 
-Scan the QR code with Expo Go, or run on a simulator with `npm run android` / `npm run ios`.
+Scan the QR code with Expo Go, or run `npm run android` / `npm run ios`.
 
-> The mobile app points to the hosted API by default. To develop locally, update the base URL in `mobile/services/api.ts`.
+> The mobile app points to the hosted Railway API by default. To develop locally, change `API_URL` in `mobile/services/api.ts`.
 
 ## Tech Stack
 
@@ -61,20 +73,10 @@ Scan the QR code with Expo Go, or run on a simulator with `npm run android` / `n
 | Web client | Express, Handlebars, CSS |
 | REST API | Express (Node.js) |
 | Database | SQLite3 |
-| Auth | bcrypt + express-session / JSON response for mobile |
+| Auth (web) | bcrypt + express-session (cookie) |
+| Auth (mobile) | bcrypt + JWT (jsonwebtoken) |
 | File uploads | Multer |
-
-## Features
-
-- User registration and login (shared across web and mobile)
-- Start and end timed climbing sessions with gym name
-- Log individual climbs with grade, attempts, topped status, zones, and optional photo
-- Public session feed visible to all users
-- Mobile app syncs with the same data as the website
-
-## Deployment
-
-The web server is hosted at `bloc-production.up.railway.app`. The mobile app connects to this endpoint for all API calls.
+| Hosting | Railway |
 
 ## Author
 
