@@ -30,7 +30,15 @@ app.engine('handlebars', engine({
   defaultLayout: 'main',
   layoutsDir: path.join(__dirname, 'views/layouts'),
   helpers: {
-    eq: (a, b) => a === b,  // used in templates: {{#if (eq session.user_id user.id)}}
+    eq: (a, b) => a === b,
+    formatDate: (iso) => {
+      if (!iso) return '';
+      return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    },
+    formatDateTime: (iso) => {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    },
   },
 }));
 app.set('view engine', 'handlebars');

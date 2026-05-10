@@ -562,3 +562,258 @@ main {
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
+/* ===== DELETE CLIMB BUTTON ===== */
+
+.climb-grade-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.climb-grade-row .climb-grade {
+  margin: 0;
+}
+
+.btn-delete-climb {
+  background: none;
+  border: none;
+  color: #6b3030;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.btn-delete-climb:hover {
+  color: #ff6b6b;
+}
+
+/* ===== PROFILE / STATS ===== */
+
+.profile-page h2 {
+  color: #c9a0dc;
+  margin-bottom: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #252330;
+  border: 1px solid #3a3845;
+  border-radius: 8px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #c9a0dc;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.profile-section {
+  background: #252330;
+  border: 1px solid #3a3845;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-section h3 {
+  color: #c9a0dc;
+  margin-bottom: 1rem;
+}
+
+.top-gym-name {
+  font-size: 1.2rem;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.grade-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.grade-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.grade-label {
+  width: 48px;
+  color: #c9a0dc;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.grade-bar-track {
+  flex: 1;
+  height: 18px;
+  background: #19181f;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.grade-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7b3f8c, #c9a0dc);
+  border-radius: 9px;
+  min-width: 4px;
+}
+
+.grade-count {
+  width: 24px;
+  text-align: right;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.grade-topped-pct {
+  width: 80px;
+  color: #777;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .grade-topped-pct { display: none; }
+}
+
+/* ===== COMP204 NAV LINK ===== */
+
+.nav-comp204 {
+  border: 1px solid #7b3f8c;
+  border-radius: 4px;
+  color: #c9a0dc !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.nav-comp204:hover {
+  background: #7b3f8c !important;
+  color: #fff !important;
+}
+
+/* ===== COMP204 PAGE ===== */
+
+.comp204-page h2 {
+  color: #c9a0dc;
+  margin-bottom: 0.25rem;
+}
+
+.comp204-subtitle {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.comp204-intro {
+  color: #a0a0a0;
+  line-height: 1.7;
+  max-width: 760px;
+  margin-bottom: 2rem;
+}
+
+.comp204-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .comp204-grid { grid-template-columns: 1fr; }
+}
+
+.comp204-col {
+  background: #252330;
+  border: 1px solid #3a3845;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.comp204-col.added {
+  border-color: #7b3f8c;
+}
+
+.comp204-col h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.comp204-col.original h3 { color: #888; }
+.comp204-col.added h3    { color: #c9a0dc; }
+
+.comp204-col-desc {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.comp204-col ul {
+  padding-left: 1.2rem;
+  color: #a0a0a0;
+  line-height: 1.8;
+}
+
+.comp204-col li { margin-bottom: 0.4rem; }
+
+.comp204-col code {
+  font-size: 0.85em;
+  background: #19181f;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  color: #c9a0dc;
+}
+
+.comp204-col a { color: #c9a0dc; }
+
+.comp204-arch {
+  background: #252330;
+  border: 1px solid #3a3845;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.comp204-arch h3 {
+  color: #c9a0dc;
+  margin-bottom: 1rem;
+}
+
+.arch-diagram {
+  background: #19181f;
+  border: 1px solid #3a3845;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #a0a0a0;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.comp204-arch > p {
+  color: #a0a0a0;
+  line-height: 1.7;
+  max-width: 720px;
+}

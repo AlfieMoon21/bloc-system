@@ -1,0 +1,51 @@
+<div class="profile-page">
+  <h2>My Profile</h2>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{stats.total_sessions}}</div>
+      <div class="stat-label">Sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{stats.total_climbs}}</div>
+      <div class="stat-label">Climbs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{stats.topped_pct}}%</div>
+      <div class="stat-label">Topped</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{stats.avg_attempts}}</div>
+      <div class="stat-label">Avg Attempts</div>
+    </div>
+  </div>
+
+  {{#if stats.top_gym}}
+  <div class="profile-section">
+    <h3>Favourite Gym</h3>
+    <p class="top-gym-name">{{stats.top_gym}}</p>
+  </div>
+  {{/if}}
+
+  {{#if grades.length}}
+  <div class="profile-section">
+    <h3>Grade Distribution</h3>
+    <div class="grade-chart">
+      {{#each grades}}
+      <div class="grade-row">
+        <span class="grade-label">{{this.grade}}</span>
+        <div class="grade-bar-track">
+          <div class="grade-bar" style="width: {{this.bar_width}}%"></div>
+        </div>
+        <span class="grade-count">{{this.count}}</span>
+        <span class="grade-topped-pct">{{this.topped_pct}}% topped</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#unless grades.length}}
+  <p class="no-sessions">No climbs logged yet — start a session to see your stats.</p>
+  {{/unless}}
+</div>

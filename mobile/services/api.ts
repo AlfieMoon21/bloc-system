@@ -65,6 +65,19 @@ export const api = {
     return res.json();
   },
 
+  getStats: async () => {
+    const res = await fetch(`${API_URL}/api/stats`, { headers: authHeaders() });
+    return res.json();
+  },
+
+  deleteClimb: async (sessionId: string | number, climbId: number) => {
+    const res = await fetch(`${API_URL}/api/sessions/${sessionId}/climbs/${climbId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    return res.json();
+  },
+
   addClimb: async (
     sessionId: string | number,
     climb: { grade: string; attempts: number; topped: boolean; zones?: number; description?: string },

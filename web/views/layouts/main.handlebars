@@ -15,10 +15,12 @@
                 <ul>
                     <li><a href="/">Home</a></li>
                     {{#if user}}
+                        <li><a href="/profile">Profile</a></li>
                         <li><a href="/logout">Logout</a></li>
                     {{else}}
                         <li><a href="/login">Login</a></li>
                     {{/if}}
+                    <li><a href="/comp204" class="nav-comp204">COMP204</a></li>
                 </ul>
             </nav>
         </div>

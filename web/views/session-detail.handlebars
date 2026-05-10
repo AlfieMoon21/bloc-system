@@ -1,8 +1,8 @@
 <div class="session-header">
   <h2>{{session.gym_name}}</h2>
-  <p>Started: {{session.start_time}}</p>
+  <p>Started: {{formatDateTime session.start_time}}</p>
   {{#if session.end_time}}
-    <p>Ended: {{session.end_time}}</p>
+    <p>Ended: {{formatDateTime session.end_time}}</p>
   {{else}}
     <p class="active-badge">Session Active</p>
   {{/if}}
@@ -38,9 +38,19 @@
               <img src="{{this.image_path}}" alt="Climb photo">
             </div>
           {{/if}}
-          
+
           <div class="climb-info">
-            <h4 class="climb-grade">{{this.grade}}</h4>
+            <div class="climb-grade-row">
+              <h4 class="climb-grade">{{this.grade}}</h4>
+              {{#unless ../session.end_time}}
+                {{#if (eq ../user.id ../session.user_id)}}
+                  <form action="/session/{{../session.id}}/climbs/{{this.id}}/delete" method="POST"
+                        onsubmit="return confirm('Delete this climb?')" style="margin:0">
+                    <button type="submit" class="btn-delete-climb" title="Delete climb">✕</button>
+                  </form>
+                {{/if}}
+              {{/unless}}
+            </div>
             
             <div class="climb-stats">
               <span class="stat">
@@ -59,8 +69,8 @@
             {{#if this.description}}
               <p class="climb-description">{{this.description}}</p>
             {{/if}}
-          </div>
-        </div>
+          </div><!-- climb-info -->
+        </div><!-- climb-card -->
       {{/each}}
     </div>
   {{else}}

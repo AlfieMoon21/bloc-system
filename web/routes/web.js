@@ -239,4 +239,96 @@ router.post('/session/:id/end', requireAuth, (req, res) => {
   );
 });
 
+// GET /comp204 — publicly accessible project overview page
+router.get('/comp204', (req, res) => {
+  res.render('comp204', { title: 'COMP204 — Distributed Systems' });
+});
+
+// POST /session/:id/climbs/:climbId/delete — web-form-compatible delete.
+// HTML forms can't send DELETE; this POST route does the same thing.
+// Only the session owner can delete from an active session.
+router.post('/session/:id/climbs/:climbId/delete', requireAuth, (req, res) => {
+  db.run(
+    `DELETE FROM climbs
+     WHERE id = ? AND session_id = ?
+       AND EXISTS (
+         SELECT 1 FROM sessions
+         WHERE id = ? AND user_id = ? AND end_time IS NULL
+       )`,
+    [req.params.climbId, req.params.id, req.params.id, req.session.userId],
+    function (err) {
+      if (err) return res.status(500).send('Error deleting climb');
+      res.redirect(`/session/${req.params.id}`);
+    }
+  );
+});
+
+// GET /profile — current user's stats page.
+// Runs three aggregate queries in series then renders the profile template.
+router.get('/profile', requireAuth, (req, res) => {
+  const uid = req.session.userId;
+
+  db.get(
+    `SELECT
+      COUNT(DISTINCT s.id)                                           AS total_sessions,
+      COUNT(c.id)                                                    AS total_climbs,
+      COALESCE(SUM(CASE WHEN c.topped = 1 THEN 1 ELSE 0 END), 0)   AS topped_count,
+      ROUND(AVG(c.attempts), 1)                                      AS avg_attempts
+    FROM sessions s
+    LEFT JOIN climbs c ON c.session_id = s.id
+    WHERE s.user_id = ?`,
+    [uid],
+    (err, summary) => {
+      if (err) return res.status(500).render('error', { message: 'Database error', title: 'Error' });
+
+      db.all(
+        `SELECT grade, COUNT(*) AS count, SUM(topped) AS topped_count
+         FROM climbs
+         JOIN sessions ON climbs.session_id = sessions.id
+         WHERE sessions.user_id = ?
+         GROUP BY grade
+         ORDER BY count DESC
+         LIMIT 15`,
+        [uid],
+        (err, grades) => {
+          if (err) return res.status(500).render('error', { message: 'Database error', title: 'Error' });
+
+          db.get(
+            `SELECT gym_name, COUNT(*) AS count
+             FROM sessions WHERE user_id = ?
+             GROUP BY gym_name ORDER BY count DESC LIMIT 1`,
+            [uid],
+            (err, topGym) => {
+              if (err) return res.status(500).render('error', { message: 'Database error', title: 'Error' });
+
+              const total_climbs  = summary.total_climbs  || 0;
+              const topped_count  = summary.topped_count  || 0;
+              const maxCount      = grades.length > 0 ? grades[0].count : 1;
+
+              const gradesWithBar = grades.map((g) => ({
+                ...g,
+                bar_width:   Math.round((g.count / maxCount) * 100),
+                topped_pct:  g.count > 0 ? Math.round((g.topped_count / g.count) * 100) : 0,
+              }));
+
+              res.render('profile', {
+                title: 'My Profile',
+                stats: {
+                  total_sessions: summary.total_sessions || 0,
+                  total_climbs,
+                  topped_count,
+                  topped_pct: total_climbs > 0 ? Math.round((topped_count / total_climbs) * 100) : 0,
+                  avg_attempts: summary.avg_attempts || 0,
+                  top_gym: topGym ? topGym.gym_name : null,
+                },
+                grades: gradesWithBar,
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
 module.exports = router;

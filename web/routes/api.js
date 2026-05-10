@@ -239,4 +239,80 @@ router.post('/sessions/:id/climbs', requireApiAuth, upload.single('image'), (req
   );
 });
 
+// GET /api/stats — aggregated climbing stats for the current user.
+// Three sequential queries: summary totals, grade distribution, favourite gym.
+router.get('/stats', requireApiAuth, (req, res) => {
+  const uid = req.userId;
+
+  db.get(
+    `SELECT
+      COUNT(DISTINCT s.id)                                           AS total_sessions,
+      COUNT(c.id)                                                    AS total_climbs,
+      COALESCE(SUM(CASE WHEN c.topped = 1 THEN 1 ELSE 0 END), 0)   AS topped_count,
+      ROUND(AVG(c.attempts), 1)                                      AS avg_attempts
+    FROM sessions s
+    LEFT JOIN climbs c ON c.session_id = s.id
+    WHERE s.user_id = ?`,
+    [uid],
+    (err, summary) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      db.all(
+        `SELECT grade, COUNT(*) AS count, SUM(topped) AS topped_count
+         FROM climbs
+         JOIN sessions ON climbs.session_id = sessions.id
+         WHERE sessions.user_id = ?
+         GROUP BY grade
+         ORDER BY count DESC
+         LIMIT 15`,
+        [uid],
+        (err, grades) => {
+          if (err) return res.status(500).json({ error: 'Database error' });
+
+          db.get(
+            `SELECT gym_name, COUNT(*) AS count
+             FROM sessions
+             WHERE user_id = ?
+             GROUP BY gym_name
+             ORDER BY count DESC
+             LIMIT 1`,
+            [uid],
+            (err, topGym) => {
+              if (err) return res.status(500).json({ error: 'Database error' });
+
+              res.json({
+                total_sessions: summary.total_sessions || 0,
+                total_climbs:   summary.total_climbs   || 0,
+                topped_count:   summary.topped_count   || 0,
+                avg_attempts:   summary.avg_attempts   || 0,
+                top_gym:        topGym ? topGym.gym_name : null,
+                grade_distribution: grades,
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+// DELETE /api/sessions/:id/climbs/:climbId — remove a climb.
+// The EXISTS subquery ensures the session is still active and owned by this user.
+router.delete('/sessions/:id/climbs/:climbId', requireApiAuth, (req, res) => {
+  db.run(
+    `DELETE FROM climbs
+     WHERE id = ? AND session_id = ?
+       AND EXISTS (
+         SELECT 1 FROM sessions
+         WHERE id = ? AND user_id = ? AND end_time IS NULL
+       )`,
+    [req.params.climbId, req.params.id, req.params.id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (this.changes === 0) return res.status(404).json({ error: 'Climb not found or session already ended' });
+      res.json({ message: 'Climb deleted' });
+    }
+  );
+});
+
 module.exports = router;

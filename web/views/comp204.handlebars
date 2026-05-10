@@ -1,0 +1,90 @@
+<div class="comp204-page">
+  <h2>COMP204 — Distributed Systems</h2>
+  <p class="comp204-subtitle">Falmouth University · AJ313798</p>
+
+  <p class="comp204-intro">
+    Bloc started as a solo web project. For COMP204 it was extended into a distributed system:
+    a shared backend serving two independent clients — a server-rendered website and a React Native
+    mobile app — over the same REST API. This page documents what existed before the module and
+    what was built for it.
+  </p>
+
+  <div class="comp204-grid">
+
+    <div class="comp204-col original">
+      <h3>Original project</h3>
+      <p class="comp204-col-desc">Web-only bouldering session tracker</p>
+      <ul>
+        <li>Express + Handlebars server-rendered site</li>
+        <li>Cookie / express-session authentication</li>
+        <li>Start, view, and end bouldering sessions</li>
+        <li>Log individual climbs with grade, attempts, zones, topped flag, notes, and photo</li>
+        <li>Public feed of completed sessions</li>
+        <li>Multer file upload to <code>/public/uploads/</code></li>
+        <li>SQLite database with <code>users</code>, <code>sessions</code>, <code>climbs</code> tables</li>
+        <li>All logic in a single <code>server.js</code></li>
+      </ul>
+    </div>
+
+    <div class="comp204-col added">
+      <h3>Added for COMP204</h3>
+      <p class="comp204-col-desc">Distributed system extensions</p>
+      <ul>
+        <li>
+          <strong>REST API</strong> (<code>/api/*</code>) — a separate JSON API consumed by the
+          mobile client, mounted alongside the existing web routes
+        </li>
+        <li>
+          <strong>JWT authentication</strong> — <code>requireApiAuth</code> middleware validates
+          Bearer tokens for every API route; the web app continues to use cookies so both auth
+          mechanisms coexist on the same server
+        </li>
+        <li>
+          <strong>CORS</strong> — enables the mobile app to call the API from a different origin
+        </li>
+        <li>
+          <strong>Modular structure</strong> — routes and middleware refactored from a single file
+          into <code>routes/api.js</code>, <code>routes/web.js</code>, and <code>middleware/</code>
+        </li>
+        <li>
+          <strong>React Native mobile app</strong> — Feed, My Sessions, and Stats tabs; login /
+          register; session detail with add-climb form, grade picker, and photo upload; JWT stored
+          in AuthContext
+        </li>
+        <li>
+          <strong>Stats</strong> — <code>GET /api/stats</code> aggregates total sessions, climbs,
+          topped percentage, average attempts, grade distribution, and favourite gym; mirrored as
+          a <a href="/profile">Profile</a> page on the web
+        </li>
+        <li>
+          <strong>Delete climb</strong> — <code>DELETE /api/sessions/:id/climbs/:climbId</code>
+          (API) and a POST equivalent for HTML forms on the web
+        </li>
+        <li>
+          <strong>Grade picker</strong> — mobile add-climb form replaced free-text input with a
+          modal selector covering V-scale (VB–V17) and Fontainebleau (4–8C+)
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="comp204-arch">
+    <h3>Architecture</h3>
+    <pre class="arch-diagram">
+ React Native app  ──┐
+                     ├──▶  Express server (Node.js)  ──▶  SQLite DB
+ Web browser       ──┘          │
+                                └──▶  /public/uploads/  (images)
+
+ Mobile auth:  JWT Bearer token   (stateless, stored in AuthContext)
+ Web auth:     express-session cookie  (server-side session store)
+    </pre>
+    <p>
+      Both clients read and write the same database in real time. A climb logged on the mobile app
+      appears immediately on the web feed, and vice versa — demonstrating the core distributed
+      systems requirement of shared state across independent clients.
+    </p>
+  </div>
+
+</div>

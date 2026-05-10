@@ -68,6 +68,24 @@ Scan the QR code with Expo Go, or run `npm run android` / `npm run ios`.
 
 > The mobile app points to the hosted Railway API by default. To develop locally, change `API_URL` in `mobile/services/api.ts`.
 
+## Features
+
+### Session tracking
+- Start and end bouldering sessions at any gym
+- Log individual climbs with grade, attempts, zones, topped status, notes, and an optional photo
+- Delete a climb while a session is still active
+- Public feed shows the 20 most recent completed sessions from all users
+
+### Stats (mobile Stats tab / web Profile page)
+- Total sessions and climbs
+- Topped percentage and average attempts
+- Grade distribution bar chart (up to 15 grades)
+- Favourite gym
+
+### Grade picker (mobile)
+- Scrollable grade selector instead of free-text input
+- Supports V-scale (VB–V17) and Fontainebleau (4–8C+) with a toggle
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -80,6 +98,23 @@ Scan the QR code with Expo Go, or run `npm run android` / `npm run ios`.
 | Auth (mobile) | bcrypt + JWT (jsonwebtoken) |
 | File uploads | Multer |
 | Hosting | Railway |
+
+## API Reference
+
+All API routes are mounted under `/api`. Protected routes require `Authorization: Bearer <token>`.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/login` | — | Returns JWT + user profile |
+| POST | `/api/auth/register` | — | Creates account, returns JWT |
+| GET | `/api/feed` | — | 20 most recent completed sessions |
+| GET | `/api/sessions` | ✓ | Current user's sessions |
+| POST | `/api/sessions` | ✓ | Start a new session |
+| GET | `/api/sessions/:id` | ✓ | Session + climbs |
+| POST | `/api/sessions/:id/end` | ✓ | End a session |
+| POST | `/api/sessions/:id/climbs` | ✓ | Add a climb (multipart) |
+| DELETE | `/api/sessions/:id/climbs/:climbId` | ✓ | Delete a climb |
+| GET | `/api/stats` | ✓ | Aggregated stats for current user |
 
 ## Author
 
